@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" fill="currentColor">
+  <path d="M100,75 Q125,40 150,75 Q175,40 200,75 Q175,110 150,75 Q125,110 100,75 Z" fill="currentColor"/>
+  <text x="150" y="105" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle">DISNEY</text>
+</svg>

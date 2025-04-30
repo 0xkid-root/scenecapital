@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" fill="currentColor">
+  <path d="M50,75 h200 M150,25 v100" stroke="currentColor" stroke-width="8"/>
+  <text x="150" y="105" font-family="Arial" font-size="24" font-weight="bold" text-anchor="middle">SONY</text>
+  <text x="150" y="125" font-family="Arial" font-size="14" text-anchor="middle">PICTURES</text>
+</svg>
