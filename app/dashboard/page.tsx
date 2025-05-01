@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Overview } from "@/components/dashboard/overview";
@@ -10,8 +12,74 @@ import { TokenizedIPCards } from "@/components/dashboard/tokenized-ip-cards";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { FileSignature, DollarSign, Wallet } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { NetworkSwitch } from "@/components/NetworkSwitch";
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [isConnected, setIsConnected] = useState(false);
+  const [activeTab, setActiveTab] = useState("investor");
+  const [account, setAccount] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          // Get current accounts
+          const accounts = await window.ethereum.request({ 
+            method: 'eth_accounts' 
+          });
+          
+          if (accounts && accounts.length > 0) {
+            setAccount(accounts[0]);
+            setIsConnected(true);
+          } else {
+            router.push("/");
+          }
+        } catch (err) {
+          console.error("Failed to get accounts:", err);
+          router.push("/");
+        }
+      } else {
+        router.push("/");
+      }
+    };
+
+    checkConnection();
+
+    // Listen for account changes
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+        if (accounts.length === 0) {
+          setIsConnected(false);
+          router.push("/");
+        } else {
+          setAccount(accounts[0]);
+          setIsConnected(true);
+        }
+      });
+    }
+
+    // Set active tab from URL params
+    const tab = searchParams.get("tab");
+    if (tab && (tab === "investor" || tab === "creator")) {
+      setActiveTab(tab);
+    }
+
+    // Cleanup listener
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', () => {});
+      }
+    };
+  }, [searchParams, router]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    router.push(`/dashboard?tab=${value}`);
+  };
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -45,19 +113,24 @@ export default function DashboardPage() {
           <p className="text-muted-foreground mt-1">Welcome to your decentralized IP licensing platform</p>
         </div>
         <motion.div 
-          className="glass-card dark:glass-card-dark px-4 py-2 rounded-lg shadow-float"
+          className="glass-card dark:glass-card-dark px-4 py-2 rounded-lg shadow-float flex items-center"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
         >
-          <p className="text-sm font-medium">IP Portfolio Value: <span className="font-bold text-primary">$24,563.00</span></p>
+          <div>
+            <p className="text-sm font-medium">
+              IP Portfolio Value: <span className="font-bold text-primary">$24,563.00</span>
+            </p>
+          </div>
+          <NetworkSwitch />
         </motion.div>
       </motion.div>
 
       <motion.div variants={item}>
-        <Tabs defaultValue="creator" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="creator">Creator Dashboard</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+          <TabsList className="bg-navy-800">
             <TabsTrigger value="investor">Investor Dashboard</TabsTrigger>
+            <TabsTrigger value="creator">Creator Dashboard</TabsTrigger>
           </TabsList>
           
           {/* Creator Dashboard */}
