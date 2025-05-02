@@ -10,7 +10,7 @@ interface AnimatedCardProps extends HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export function AnimatedCard({ delay = 0, className, children, ...props }: AnimatedCardProps) {
+export function AnimatedCard({ delay = 0, className, children }: AnimatedCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -20,13 +20,13 @@ export function AnimatedCard({ delay = 0, className, children, ...props }: Anima
         delay,
         ease: [0.4, 0, 0.2, 1]
       }}
+      drag
     >
-      <Card 
+      <Card
         className={cn(
           "overflow-hidden backdrop-blur-sm bg-white/50 dark:bg-slate-900/50 hover:shadow-lg transition-all duration-300",
           className
         )}
-        {...props}
       >
         {children}
       </Card>

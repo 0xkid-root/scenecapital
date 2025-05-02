@@ -9,10 +9,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function TransactionFilters() {
+type TransactionFiltersProps = {
+  currentFilter: string;
+  onFilterChange: (value: string) => void;
+};
+
+export function TransactionFilters({ currentFilter, onFilterChange }: TransactionFiltersProps) {
   return (
     <div className="flex items-center gap-4">
-      <Select defaultValue="all">
+      <Select value={currentFilter} onValueChange={onFilterChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Transaction Type" />
         </SelectTrigger>
@@ -36,7 +41,7 @@ export function TransactionFilters() {
         </SelectContent>
       </Select>
 
-      <Button variant="outline">Reset Filters</Button>
+      <Button variant="outline" onClick={() => onFilterChange("all")}>Reset Filters</Button>
     </div>
   );
 }

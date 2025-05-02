@@ -1,6 +1,7 @@
 import React from "react";
+import { LucideIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { DivideIcon as LucideIcon } from "lucide-react";
 
 interface BadgeWithIconProps {
   icon: LucideIcon;

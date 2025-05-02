@@ -1,7 +1,11 @@
+"use client";
+
 import { PortfolioOverview } from '@/components/portfolio/portfolio-overview';
 import { PortfolioStats } from '@/components/portfolio/portfolio-stats';
 import { InvestmentsList } from '@/components/portfolio/investments-list';
 import { PageHeader } from '@/components/ui/page-header';
+import { ClientPortfolio } from "@/components/portfolio/client-portfolio";
+import { motion } from "framer-motion";
 
 export default function PortfolioPage() {
   return (
@@ -21,6 +25,7 @@ export default function PortfolioPage() {
           <InvestmentsList />
         </div>
       </div>
+      <ClientPortfolio />
     </div>
   );
 }

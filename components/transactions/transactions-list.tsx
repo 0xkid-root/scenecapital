@@ -21,7 +21,11 @@ interface Transaction {
   direction: 'inbound' | 'outbound';
 }
 
-export function TransactionsList() {
+type TransactionsListProps = {
+  filter: string;
+};
+
+export function TransactionsList({ filter }: TransactionsListProps) {
   const transactions: Transaction[] = [
     {
       id: "1",
