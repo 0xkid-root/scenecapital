@@ -1,3 +1,6 @@
+"use client";
+
+import { motion } from "framer-motion";
 import { ProjectGrid } from '@/components/projects/project-grid';
 import { ProjectFilters } from '@/components/projects/project-filters';
 import { PageHeader } from '@/components/ui/page-header';

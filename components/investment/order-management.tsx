@@ -39,10 +39,14 @@ export function OrderManagement() {
         description: `Your order for $${amount} has been placed.`,
       });
     } catch (error) {
-      console.error(error);
+      if (error instanceof Error) {
+        console.error(error.message);
+      } else {
+        console.error("Unknown error", error);
+      }
       toast({
         title: "Error placing order",
-        description: error.message,
+        description: "An unknown error occurred",
         variant: "destructive",
       });
     }
