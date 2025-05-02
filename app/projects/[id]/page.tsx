@@ -11,7 +11,6 @@ import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import type { HTMLMotionProps } from 'framer-motion';
 import { ethers } from 'ethers';
-import { Blockchain } from '@/lib/blockchain';
 import { useToast } from '@/components/ui/use-toast';
 import type { Project } from '@/types/project';
 
@@ -90,7 +89,7 @@ const ProjectPage: FC<{ params: { id: string } }> = ({ params }) => {
   const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [kycStatus, setKycStatus] = useState<'pending' | 'completed' | 'none'>('none');
-  const [blockchain, setBlockchain] = useState<Blockchain | null>(null);
+  const [blockchain, setBlockchain] = useState<null>(null);
   const [activeImage, setActiveImage] = useState(0);
   const { toast } = useToast();
 
@@ -115,11 +114,10 @@ const ProjectPage: FC<{ params: { id: string } }> = ({ params }) => {
     const initBlockchain = async () => {
       if (typeof window !== 'undefined' && window.ethereum) {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const bc = new Blockchain(provider);
-        setBlockchain(bc);
+      
 
         try {
-          await bc.connect();
+      
           setIsConnected(true);
           // Check KYC status
           // This would be implemented in the Blockchain class

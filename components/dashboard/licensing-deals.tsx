@@ -130,22 +130,7 @@ export function LicensingDeals() {
       animate="show"
       className="space-y-6"
     >
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold">Licensing Deals</h2>
-          <p className="text-muted-foreground">Manage your IP licensing agreements</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" className="flex items-center gap-1">
-            <Filter className="h-4 w-4" />
-            <span className="hidden sm:inline">Filter</span>
-          </Button>
-          <Button size="sm" className="flex items-center gap-1">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New Deal</span>
-          </Button>
-        </div>
-      </div>
+
 
       <motion.div variants={item}>
         <Card className="overflow-hidden">

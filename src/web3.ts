@@ -504,8 +504,10 @@ export class SceneCapitalSDK {
       return {
       assetAddress: event.args.assetAddress,
       tokenId: event.args.tokenId.toNumber()
-    });
+
+      });
   }
+
 
   async getAllDeployedAssets(): Promise<string[]> {
     return this.ipAssetFactory.getAllDeployedAssets();
@@ -595,7 +597,7 @@ export class SceneCapitalSDK {
     if (!this.signer) throw new Error('Signer required for this operation');
     if (assetId < 0) throw new Error('Invalid asset ID');
     if (amount.lte(0)) throw new Error('Amount must be greater than 0');
-    const tx = await this.royaltyManager.distributeNativeRoyalties(assetId, amount, { value: amount });
+    const tx = await this.royaltyManager.distributeNativeRoyalties(assetId, amount);
     await tx.wait();
   }
 
@@ -788,7 +790,7 @@ export class SceneCapitalSDK {
       }
     }
 
-    const tx = await this.marketplace.batchBuyNow(listingIds, { value: totalETHRequired });
+    const tx = await this.marketplace.batchBuyNow(listingIds);
     await tx.wait();
   }
 
@@ -890,7 +892,7 @@ export class SceneCapitalSDK {
 
     if (!event) throw new Error('ProposalCreated event not found');
 
-    return event.args.proposalId.toNumber();
+    return event?.args?.proposalId.toNumber();
   }
 
   async castVote(proposalId: number, support: number): Promise<BigNumber> {
@@ -1293,6 +1295,6 @@ export class SceneCapitalSDK {
     this.governance.on(filter, (proposalId, proposer, targets, values, description) => {
       callback(proposalId.toNumber(), proposer, targets, values, description);
     });
-    return () => this.governance.removeAllListeners(filter);
+    return () => this.governance?.removeAllListeners(filter);
   }
 }

@@ -1,4 +1,7 @@
 "use client";
+import { useState } from "react";
+import { WalletConnectModal } from "@/components/modals/WalletConnectModal";
+
 
 import { HeroSection } from '@/components/sections/hero';
 import { FeaturesSection } from '@/components/sections/features';
@@ -20,6 +23,29 @@ export default function Home() {
       };
     }
   }, []);
+
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    redirectPath: "/dashboard",
+    redirectTab: "investor",
+  });
+
+  const handleInvestClick = () => {
+    setModalConfig({
+      redirectPath: "/dashboard",
+      redirectTab: "investor",
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSubmitProject = () => {
+    setModalConfig({
+      redirectPath: "/dashboard",
+      redirectTab: "creator",
+    });
+    setIsModalOpen(true);
+  };
 
   return (
     <main className="relative overflow-hidden">
@@ -54,6 +80,13 @@ export default function Home() {
       >
         Skip to main content
       </a>
+
+      <WalletConnectModal
+        isOpen={isModalOpen}
+         onClose={() => setIsModalOpen(false)}
+         redirectPath={modalConfig.redirectPath}
+        redirectTab={modalConfig.redirectTab}
+       />
     </main>
   );
 }
