@@ -14,6 +14,8 @@ import { motion } from "framer-motion";
 import { FileSignature, DollarSign, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { NetworkSwitch } from "@/components/NetworkSwitch";
+import { SubmitProjectButton } from "@/components/dashboard/SubmitProjectButton";
+import { QuickActionButtons } from "@/components/dashboard/QuickActionButtons";
 
 export default function DashboardPage() {
   const searchParams = useSearchParams();
@@ -61,9 +63,9 @@ export default function DashboardPage() {
       });
     }
 
-    // Set active tab from URL params
+    // Get tab from URL parameters
     const tab = searchParams.get("tab");
-    if (tab && (tab === "investor" || tab === "creator")) {
+    if (tab === "creator" || tab === "investor") {
       setActiveTab(tab);
     }
 
@@ -77,6 +79,7 @@ export default function DashboardPage() {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    // Update URL with new tab
     router.push(`/dashboard?tab=${value}`);
   };
 
@@ -143,10 +146,7 @@ export default function DashboardPage() {
                     <p className="text-muted-foreground">Manage your creative IP assets and monitor your revenue</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">
-                      <FileSignature className="h-4 w-4 mr-2" />
-                      Submit New Project
-                    </Button>
+                    <SubmitProjectButton />
                   </div>
                 </div>
               </Card>
@@ -168,24 +168,7 @@ export default function DashboardPage() {
                   <h3 className="text-xl font-semibold">Quick Actions</h3>
                 </div>
                 <div className="p-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button variant="outline" className="h-24 flex flex-col items-center justify-center gap-2">
-                      <FileSignature className="h-6 w-6" />
-                      <span>Create License</span>
-                    </Button>
-                    <Button variant="outline" className="h-24 flex flex-col items-center justify-center gap-2">
-                      <DollarSign className="h-6 w-6" />
-                      <span>View Royalties</span>
-                    </Button>
-                    <Button variant="outline" className="h-24 flex flex-col items-center justify-center gap-2">
-                      <Wallet className="h-6 w-6" />
-                      <span>Withdraw Funds</span>
-                    </Button>
-                    <Button variant="outline" className="h-24 flex flex-col items-center justify-center gap-2">
-                      <FileSignature className="h-6 w-6" />
-                      <span>IP Protection</span>
-                    </Button>
-                  </div>
+                  <QuickActionButtons />
                 </div>
               </Card>
             </div>

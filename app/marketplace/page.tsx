@@ -195,247 +195,187 @@ export default function MarketplacePage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8 relative overflow-hidden">
-      {/* Background gradient elements */}
-      <div className="absolute -top-48 -right-48 w-96 h-96 bg-primary/5 rounded-full filter blur-3xl opacity-30 animate-pulse-slow" />
-      <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-secondary/5 rounded-full filter blur-3xl opacity-30 animate-pulse-slow" />
-      
-      <motion.div
-        initial="hidden"
-        animate="show"
-        variants={container}
-        className="space-y-8"
-      >
-        {/* Page Header */}
-        <motion.div variants={item} className="space-y-2">
-          <h1 className="text-3xl font-bold">IP Token Marketplace</h1>
-          <p className="text-muted-foreground">
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={container}
+      className="flex-1 space-y-6 p-4 md:p-8 pt-6"
+    >
+      {/* Page Header */}
+      <motion.div variants={item} className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight gradient-text">IP Token Marketplace</h2>
+          <p className="text-muted-foreground mt-1">
             Discover, buy, and trade tokenized intellectual property assets from films, music, books, and more.
           </p>
-        </motion.div>
+        </div>
+      </motion.div>
 
-        {/* Market Overview */}
-        <motion.div variants={item}>
-          <Card className="p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Market Overview</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 bg-gradient-to-br from-primary/5 to-transparent rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  <h3 className="font-medium">Market Cap</h3>
-                </div>
-                <p className="text-2xl font-bold">$2.7M</p>
-                <p className="text-sm text-green-600 flex items-center">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  +15.4% this week
-                </p>
+      {/* Market Overview */}
+      <motion.div variants={item}>
+        <Card className="p-6 bg-card/50 backdrop-blur-sm">
+          <h3 className="text-lg font-semibold mb-4">Market Overview</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center text-muted-foreground">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                <span className="text-sm">Market Cap</span>
               </div>
-              
-              <div className="p-4 bg-gradient-to-br from-primary/5 to-transparent rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-5 w-5 text-primary" />
-                  <h3 className="font-medium">24h Volume</h3>
-                </div>
-                <p className="text-2xl font-bold">$198K</p>
-                <p className="text-sm text-green-600 flex items-center">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  +8.2% today
-                </p>
-              </div>
-              
-              <div className="p-4 bg-gradient-to-br from-primary/5 to-transparent rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  <h3 className="font-medium">Active Traders</h3>
-                </div>
-                <p className="text-2xl font-bold">1,245</p>
-                <p className="text-sm text-green-600 flex items-center">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  +32 today
-                </p>
-              </div>
-              
-              <div className="p-4 bg-gradient-to-br from-primary/5 to-transparent rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="h-5 w-5 text-primary" />
-                  <h3 className="font-medium">Avg. ROI</h3>
-                </div>
-                <p className="text-2xl font-bold">18.5%</p>
-                <p className="text-sm text-muted-foreground">
-                  Over 12 months
-                </p>
-              </div>
+              <div className="text-2xl font-bold">$2.7M</div>
+              <div className="text-xs text-green-500">+15.4% this week</div>
             </div>
-          </Card>
-        </motion.div>
-
-        {/* Filters and Search */}
-        <motion.div variants={item} className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search by name, symbol, or creator" 
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <div className="space-y-1">
+              <div className="flex items-center text-muted-foreground">
+                <DollarSign className="w-4 h-4 mr-2" />
+                <span className="text-sm">24h Volume</span>
+              </div>
+              <div className="text-2xl font-bold">$198K</div>
+              <div className="text-xs text-green-500">+8.2% today</div>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center text-muted-foreground">
+                <Users className="w-4 h-4 mr-2" />
+                <span className="text-sm">Active Traders</span>
+              </div>
+              <div className="text-2xl font-bold">1,245</div>
+              <div className="text-xs text-green-500">+32 today</div>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center text-muted-foreground">
+                <Clock className="w-4 h-4 mr-2" />
+                <span className="text-sm">Avg. ROI</span>
+              </div>
+              <div className="text-2xl font-bold">18.5%</div>
+              <div className="text-xs text-muted-foreground">Over 12 months</div>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="film">Films</SelectItem>
-                <SelectItem value="music">Music</SelectItem>
-                <SelectItem value="book">Books</SelectItem>
-                <SelectItem value="web series">Web Series</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="price">Price</SelectItem>
-                <SelectItem value="marketCap">Market Cap</SelectItem>
-                <SelectItem value="volume">24h Volume</SelectItem>
-                <SelectItem value="holders">Holders</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </motion.div>
+        </Card>
+      </motion.div>
 
-        {/* Token Listings */}
-        <motion.div variants={item}>
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="all">All Tokens</TabsTrigger>
-              <TabsTrigger value="trending">Trending</TabsTrigger>
-              <TabsTrigger value="new">New Listings</TabsTrigger>
-              <TabsTrigger value="watchlist">My Watchlist</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="all" className="space-y-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedTokens.map((token) => (
-                  <motion.div 
-                    key={token.id} 
-                    whileHover={{ y: -5 }}
-                    className="group"
-                  >
-                    <Card className="overflow-hidden h-full border-border/50 transition-all duration-300 hover:shadow-float">
-                      {/* Image section with gradient overlay */}
-                      <div className="relative h-40 overflow-hidden">
-                        {/* This would be an actual image in production */}
-                        <div 
-                          className="absolute inset-0 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20"
-                          style={{
-                            backgroundImage: `url(${token.image})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center'
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                        
-                        {/* Type badge */}
-                        <div className="absolute top-3 left-3">
-                          <Badge 
-                            variant="outline" 
-                            className={`flex items-center gap-1 ${getTypeColorClass(token.type)} border-0`}
-                          >
-                            {getTypeIcon(token.type)}
-                            <span>{token.type}</span>
+      {/* Search and Filters */}
+      <motion.div variants={item} className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, symbol, or creator"
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="film">Film</SelectItem>
+              <SelectItem value="music">Music</SelectItem>
+              <SelectItem value="book">Book</SelectItem>
+              <SelectItem value="web series">Web Series</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="price">Price</SelectItem>
+              <SelectItem value="marketCap">Market Cap</SelectItem>
+              <SelectItem value="volume">Volume</SelectItem>
+              <SelectItem value="holders">Holders</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </motion.div>
+
+      {/* Token Listings */}
+      <motion.div variants={item}>
+        <Tabs defaultValue="all" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="all">All Tokens</TabsTrigger>
+            <TabsTrigger value="trending">Trending</TabsTrigger>
+            <TabsTrigger value="new">New Listings</TabsTrigger>
+            <TabsTrigger value="watchlist">My Watchlist</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortedTokens.map((token) => (
+                <motion.div
+                  key={token.id}
+                  variants={item}
+                  className="group"
+                >
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                    <div className="relative h-48">
+                      {/* Add proper Image component with token.image */}
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className={`${getTypeColorClass(token.type)}`}>
+                            <span className="flex items-center gap-1">
+                              {getTypeIcon(token.type)}
+                              {token.type}
+                            </span>
+                          </Badge>
+                          <Badge variant="outline" className="bg-white/10 text-white">
+                            {token.symbol}
                           </Badge>
                         </div>
-                        
-                        {/* Title and creator */}
-                        <div className="absolute bottom-3 left-3 right-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="text-lg font-bold text-white truncate">{token.name}</h3>
-                              <p className="text-sm text-white/80">by {token.creator}</p>
-                            </div>
-                            <Badge className="bg-primary/80 hover:bg-primary">{token.symbol}</Badge>
-                          </div>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">{token.name}</h3>
+                        <Badge variant="outline" className="bg-green-500/10 text-green-500">
+                          {token.change}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4">by {token.creator}</p>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <div className="text-muted-foreground">Price</div>
+                          <div className="font-semibold">${token.price}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Holders</div>
+                          <div className="font-semibold">{token.holders}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Market Cap</div>
+                          <div className="font-semibold">${token.marketCap.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">24h Volume</div>
+                          <div className="font-semibold">${token.volume24h.toLocaleString()}</div>
                         </div>
                       </div>
-                      
-                      {/* Stats section */}
-                      <div className="p-4 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Current Price</p>
-                            <p className="text-2xl font-bold">${token.price}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">24h Change</p>
-                            <p className="text-lg font-medium text-green-600">{token.change}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                          <div className="p-2 bg-muted/30 rounded-md">
-                            <p className="text-xs text-muted-foreground">Holders</p>
-                            <p className="font-medium">{token.holders}</p>
-                          </div>
-                          <div className="p-2 bg-muted/30 rounded-md">
-                            <p className="text-xs text-muted-foreground">Market Cap</p>
-                            <p className="font-medium">${(token.marketCap / 1000).toFixed(0)}K</p>
-                          </div>
-                          <div className="p-2 bg-muted/30 rounded-md">
-                            <p className="text-xs text-muted-foreground">24h Vol</p>
-                            <p className="font-medium">${(token.volume24h / 1000).toFixed(0)}K</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex gap-2 pt-2">
-                          <Button className="flex-1 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">
-                            <Wallet className="h-4 w-4 mr-2" />
-                            Buy
-                          </Button>
-                          <Button variant="outline" className="flex-1">
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-              
-              {sortedTokens.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No tokens match your search criteria.</p>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="trending">
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">Trending tokens will appear here.</p>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="new">
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">New token listings will appear here.</p>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="watchlist">
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">Connect your wallet to view your watchlist.</p>
-                <Button className="mt-4">
-                  <Wallet className="h-4 w-4 mr-2" />
-                  Connect Wallet
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </motion.div>
+                      <Button className="w-full mt-4" size="sm">
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Trade Now
+                      </Button>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="trending">
+            {/* Similar grid for trending tokens */}
+          </TabsContent>
+
+          <TabsContent value="new">
+            {/* Similar grid for new listings */}
+          </TabsContent>
+
+          <TabsContent value="watchlist">
+            {/* Similar grid for watchlist tokens */}
+          </TabsContent>
+        </Tabs>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

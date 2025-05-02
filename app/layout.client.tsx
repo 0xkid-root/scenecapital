@@ -6,6 +6,7 @@ import localFont from 'next/font/local';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Footer } from '@/components/footer';
 import { Toaster } from '@/components/ui/toaster';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { LayoutWithConditionalSidebar } from '@/components/layout/conditional-sidebar-layout';
 
 const inter = Inter({ 
@@ -51,10 +52,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <LayoutWithConditionalSidebar>
-            {children}
-          </LayoutWithConditionalSidebar>
-          <Toaster />
+          <TooltipProvider>
+            <LayoutWithConditionalSidebar>
+              {children}
+            </LayoutWithConditionalSidebar>
+            <Toaster />
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
