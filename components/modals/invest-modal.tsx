@@ -15,16 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { DollarSign, TrendingUp, Clock, Wallet, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Blockchain } from "@/lib/blockchain";
 import type { Project } from "@/types/project";
 
 interface InvestModalProps {
   project: Project;
   onClose: () => void;
-  blockchain?: Blockchain;
 }
 
-export function InvestModal({ project, onClose, blockchain }: InvestModalProps) {
+export function InvestModal({ project, onClose }: InvestModalProps) {
   const [investmentAmount, setInvestmentAmount] = useState(1000);
 
   const handleInvest = () => {

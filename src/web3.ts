@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import type { Provider } from '@ethersproject/providers';
 import type { Signer } from '@ethersproject/abstract-signer';
 import type { BigNumber, Contract, ContractTransaction } from 'ethers';
+import { InvestmentPoolABI, InvestmentPoolContract, INVESTMENT_POOL_ADDRESSES } from './contracts/investment-pool';
 
 // Contract ABI fragments (minimal for SDK usage)
 const IPAssetFactoryABI = [
@@ -378,6 +379,7 @@ export class SceneCapitalSDK {
   private marketplace: MarketplaceContract;
   private governance?: GovernanceContract;
   private ipAssetToken?: IPAssetTokenContract;
+  private investmentPool?: InvestmentPoolContract;
 
   constructor(
     provider: Provider,
@@ -387,6 +389,7 @@ export class SceneCapitalSDK {
       royaltyManagerAddress?: string;
       marketplaceAddress?: string;
       governanceAddress?: string;
+      investmentPoolAddress?: `0x${string}`;
     }
   ) {
     this.provider = provider;
@@ -428,6 +431,15 @@ export class SceneCapitalSDK {
         GovernanceABI,
         signer || provider
       ) as GovernanceContract;
+    }
+    
+    // Initialize Investment Pool contract if address is provided
+    if (contracts?.investmentPoolAddress) {
+      this.investmentPool = new ethers.Contract(
+        contracts.investmentPoolAddress,
+        InvestmentPoolABI,
+        signer || provider
+      ) as unknown as InvestmentPoolContract;
     }
   }
 
@@ -502,10 +514,10 @@ export class SceneCapitalSDK {
     return events.map((event: any) => {
       if (!event.args) throw new Error('Event args not found');
       return {
-      assetAddress: event.args.assetAddress,
-      tokenId: event.args.tokenId.toNumber()
-
-      });
+        assetAddress: event.args.assetAddress,
+        tokenId: event.args.tokenId.toNumber()
+      };
+    });
   }
 
 

@@ -4,10 +4,13 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import localFont from 'next/font/local';
 import { ThemeProvider } from '@/components/theme-provider';
+import { Web3Provider } from '@/components/web3-provider';
 import { Footer } from '@/components/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LayoutWithConditionalSidebar } from '@/components/layout/conditional-sidebar-layout';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { AuthProvider } from '@/lib/auth-context';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -52,12 +55,18 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider>
-            <LayoutWithConditionalSidebar>
-              {children}
-            </LayoutWithConditionalSidebar>
-            <Toaster />
-          </TooltipProvider>
+          <ErrorBoundary>
+            <Web3Provider>
+              <AuthProvider>
+                <TooltipProvider>
+                  <LayoutWithConditionalSidebar>
+                    {children}
+                  </LayoutWithConditionalSidebar>
+                  <Toaster />
+                </TooltipProvider>
+              </AuthProvider>
+            </Web3Provider>
+          </ErrorBoundary>
         </ThemeProvider>
       </body>
     </html>

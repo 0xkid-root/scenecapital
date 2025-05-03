@@ -16,7 +16,7 @@ interface TransactionsListProps {
   filter: FilterType;
 }
 
-export function TransactionsList({ filter }: TransactionsListProps) {
+function TransactionsList({ filter }: TransactionsListProps) {
   // Mock transaction data (replace with actual data fetching)
   const transactions: Transaction[] = [
     { id: "1", type: "completed", amount: 100.50, date: "2025-05-01 10:00" },
@@ -74,6 +74,24 @@ export function TransactionsList({ filter }: TransactionsListProps) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <div className="container mx-auto py-8">
+      <h1 className="text-2xl font-bold mb-6">Transactions</h1>
+      
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold">Transaction History</h2>
+          
+          {/* Filter controls could go here */}
+        </div>
+        
+        <TransactionsList filter="all" />
+      </div>
     </div>
   );
 }

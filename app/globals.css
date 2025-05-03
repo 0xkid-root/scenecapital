@@ -137,6 +137,15 @@
   }
 }
 
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 @keyframes float {
   0% {
     transform: translateY(0px);
@@ -160,6 +169,10 @@
 
 .animate-spin-slow {
   animation: spin-slow var(--animation-slow, 8s) linear infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s ease-in-out infinite;
 }
 
 html {

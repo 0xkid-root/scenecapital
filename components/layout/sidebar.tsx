@@ -69,6 +69,11 @@ const routes = [
     href: "/marketplace",
   },
   {
+    label: "Orders",
+    icon: DollarSign,
+    href: "/dashboard/orders",
+  },
+  {
     label: "Transactions",
     icon: History,
     href: "/dashboard/transactions",

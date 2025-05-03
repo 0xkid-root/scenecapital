@@ -1,72 +1,88 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Wallet, X } from "lucide-react";
+import { Wallet, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { useConnect, useAccount } from "wagmi";
+import { metaMask } from "wagmi/connectors";
+import { useAuth } from "@/lib/auth-context";
+import { LoadingState } from "@/components/ui/loading-state";
+import { ErrorFallback } from "@/components/ui/error-fallback";
 
 interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
   redirectPath: string;
   redirectTab?: string;
+  requireAuth?: boolean;
 }
 
-export function WalletConnectModal({ isOpen, onClose, redirectPath, redirectTab }: WalletConnectModalProps) {
+export function WalletConnectModal({ isOpen, onClose, redirectPath, redirectTab, requireAuth = true }: WalletConnectModalProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<'connect' | 'authenticate' | 'success'>('connect');
   const router = useRouter();
+  const { connect } = useConnect();
+  const { address, isConnected } = useAccount();
+  const { session, signIn, isLoading: isAuthLoading, error: authError } = useAuth();
+
+  // Check if already connected and authenticated on mount
+  useEffect(() => {
+    if (isOpen) {
+      if (isConnected) {
+        if (session?.isAuthenticated || !requireAuth) {
+          handleSuccess();
+        } else {
+          setStep('authenticate');
+        }
+      } else {
+        setStep('connect');
+      }
+    }
+  }, [isOpen, isConnected, session?.isAuthenticated]);
 
   const connectWallet = async () => {
     setIsConnecting(true);
     setError(null);
 
     try {
-      if (!window.ethereum) {
-        throw new Error("MetaMask is not installed");
-      }
-
-      // Request account access
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      await connect({ connector: metaMask() });
       
-      // Add Pharos network if not already added
-      try {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [{
-            chainId: "0xC352",
-            chainName: "Pharos Testnet",
-            nativeCurrency: {
-              name: "ETH",
-              symbol: "ETH",
-              decimals: 18
-            },
-            rpcUrls: ["https://pharos-testnet.rpc.caldera.xyz/http"],
-            blockExplorerUrls: ["https://pharos-testnet.caldera.xyz/"]
-          }]
-        });
-      } catch (switchError: any) {
-        // Handle errors or user rejection
-        if (switchError.code === 4902) {
-          throw new Error("Please add Pharos network to MetaMask");
-        }
+      if (requireAuth) {
+        setStep('authenticate');
+      } else {
+        handleSuccess();
       }
-
-      // Close modal and redirect
-      onClose();
-      const redirectUrl = redirectTab 
-        ? `${redirectPath}?tab=${redirectTab}`
-        : redirectPath;
-      router.push(redirectUrl);
-
     } catch (err: any) {
       setError(err.message || "Failed to connect wallet");
     } finally {
       setIsConnecting(false);
     }
+  };
+  
+  const handleAuthenticate = async () => {
+    try {
+      await signIn();
+      setStep('success');
+      setTimeout(() => {
+        handleSuccess();
+      }, 1500); // Show success state briefly before redirecting
+    } catch (err: any) {
+      setError(err.message || "Failed to authenticate");
+    }
+  };
+  
+  const handleSuccess = () => {
+    // Close modal and redirect
+    onClose();
+    const redirectUrl = redirectTab 
+      ? `${redirectPath}?tab=${redirectTab}`
+      : redirectPath;
+    router.push(redirectUrl);
   };
 
   return (
@@ -122,39 +138,83 @@ export function WalletConnectModal({ isOpen, onClose, redirectPath, redirectTab 
               </div>
             </div>
 
-            {/* Connect Button Section */}
+            {/* Content Section */}
             <div className="p-6 space-y-4">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  onClick={connectWallet}
-                  disabled={isConnecting}
-                  className="w-full bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center justify-center gap-2 h-12"
-                >
-                  {isConnecting ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      <span>Connecting...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <Wallet className="w-5 h-5" />
-                      <span>Connect MetaMask</span>
-                    </>
-                  )}
-                </Button>
-              </motion.div>
+              {step === 'connect' && (
+                <>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      onClick={connectWallet}
+                      disabled={isConnecting}
+                      className="w-full bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center justify-center gap-2 h-12"
+                    >
+                      {isConnecting ? (
+                        <LoadingState size="sm" text="Connecting..." />
+                      ) : (
+                        <>
+                          <Wallet className="w-5 h-5" />
+                          <span>Connect MetaMask</span>
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+                </>
+              )}
+              
+              {step === 'authenticate' && (
+                <>
+                  <div className="text-center mb-4">
+                    <p className="text-sm text-slate-400 mb-2">
+                      Please sign a message to authenticate your wallet
+                    </p>
+                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      onClick={handleAuthenticate}
+                      disabled={isAuthLoading}
+                      className="w-full bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center justify-center gap-2 h-12"
+                    >
+                      {isAuthLoading ? (
+                        <LoadingState size="sm" text="Authenticating..." />
+                      ) : (
+                        <>
+                          <Wallet className="w-5 h-5" />
+                          <span>Sign Message</span>
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+                </>
+              )}
+              
+              {step === 'success' && (
+                <div className="flex flex-col items-center justify-center py-4">
+                  <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" />
+                  <h3 className="text-lg font-medium text-white mb-1">Authentication Successful</h3>
+                  <p className="text-sm text-slate-400">Redirecting you to the dashboard...</p>
+                </div>
+              )}
 
               {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-500/10 border border-red-500/20 rounded-lg p-3"
-                >
-                  <p className="text-red-500 text-sm text-center">{error}</p>
-                </motion.div>
+                <ErrorFallback
+                  message="Connection Error"
+                  description={error}
+                  variant="compact"
+                  onRetry={() => {
+                    setError(null);
+                    if (step === 'connect') {
+                      connectWallet();
+                    } else if (step === 'authenticate') {
+                      handleAuthenticate();
+                    }
+                  }}
+                />
               )}
             </div>
           </div>
