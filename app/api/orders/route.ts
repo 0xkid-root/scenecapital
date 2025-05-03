@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { MongoClient, Db } from 'mongodb';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { z } from 'zod';
+import logger from '@/lib/logger';
+import { verifyToken } from '@/lib/auth';
+import { sanitizeInput } from '@/lib/sanitizer';
 
 // Order interface
 interface Order {
@@ -25,150 +31,299 @@ interface Order {
   transactionHash?: string;
 }
 
+// Response interfaces
+interface OrdersResponse {
+  success: boolean;
+  data?: {
+    orders: Order[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalOrders: number;
+      totalPages: number;
+    };
+  };
+  message?: string;
+}
+
+interface CreateOrderResponse {
+  success: boolean;
+  data?: Order;
+  message?: string;
+}
+
+// MongoDB connection
+let cachedDb: Db | null = null;
+
+async function connectToDatabase(): Promise<Db> {
+  if (cachedDb) {
+    return cachedDb;
+  }
+
+  const client = await MongoClient.connect(process.env.MONGODB_URI!, {
+    maxPoolSize: 10,
+    minPoolSize: 2,
+  });
+
+  cachedDb = client.db(process.env.MONGODB_DB);
+  return cachedDb;
+}
+
+// Rate limiter configuration
+const rateLimiter = new RateLimiterMemory({
+  points: 10, // 10 requests
+  duration: 60, // per minute
+});
+
+// Validation schemas
+const getQuerySchema = z.object({
+  userId: z.string().uuid(),
+  type: z.enum(['buy', 'sell']).optional(),
+  orderType: z.enum(['market', 'limit']).optional(),
+  status: z.enum(['open', 'filled', 'partial', 'cancelled', 'expired']).optional(),
+  assetId: z.string().regex(/^asset-[0-9a-fA-F-]+$/).optional(),
+  limit: z.number().int().min(1).max(100).default(20),
+  page: z.number().int().min(1).default(1),
+});
+
+const postBodySchema = z.object({
+  type: z.enum(['buy', 'sell']),
+  orderType: z.enum(['market', 'limit']),
+  assetId: z.string().regex(/^asset-[0-9a-fA-F-]+$/),
+  assetName: z.string().min(1).max(100),
+  assetSymbol: z.string().min(1).max(10),
+  assetCategory: z.string().min(1).max(50).optional(),
+  assetImage: z.string().url().optional(),
+  quantity: z.number().int().positive(),
+  price: z.number().positive(),
+  limitPrice: z.number().positive().optional(),
+  expiryDays: z.number().int().min(1).max(30).optional(),
+}).refine(
+  (data) => data.orderType !== 'limit' || (data.limitPrice !== undefined && data.expiryDays !== undefined),
+  { message: 'Limit price and expiry days are required for limit orders' }
+);
+
+// Security headers
+const securityHeaders = {
+  'Content-Security-Policy': "default-src 'self'",
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+};
+
 export async function GET(request: Request) {
+  const startTime = Date.now();
+
   try {
-    // Check authentication
-    const authToken = cookies().get('auth_token');
-    
+    // Rate limiting
+    const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
+    await rateLimiter.consume(clientIp);
+
+    // Authentication check
+    const authToken = cookies().get('auth_token')?.value;
     if (!authToken) {
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: 'Authentication required' },
+        { status: 401, headers: securityHeaders }
       );
     }
 
-    // Get query parameters
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') as 'buy' | 'sell' | null;
-    const orderType = searchParams.get('orderType') as 'market' | 'limit' | null;
-    const status = searchParams.get('status') as Order['status'] | null;
-    const assetId = searchParams.get('assetId');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const page = parseInt(searchParams.get('page') || '1');
-    
-    // Generate mock orders
-    const orders = generateMockOrders();
-    
-    // Filter orders based on query parameters
-    let filteredOrders = [...orders];
-    
-    if (type) {
-      filteredOrders = filteredOrders.filter(order => order.type === type);
+    // Verify JWT token
+    const decodedToken = await verifyToken(authToken);
+    if (!decodedToken) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid authentication token' },
+        { status: 401, headers: securityHeaders }
+      );
     }
-    
-    if (orderType) {
-      filteredOrders = filteredOrders.filter(order => order.orderType === orderType);
-    }
-    
-    if (status) {
-      filteredOrders = filteredOrders.filter(order => order.status === status);
-    }
-    
-    if (assetId) {
-      filteredOrders = filteredOrders.filter(order => order.asset.id === assetId);
-    }
-    
-    // Sort orders by createdAt (newest first)
-    filteredOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
-    // Paginate results
-    const totalOrders = filteredOrders.length;
-    const totalPages = Math.ceil(totalOrders / limit);
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
-    return NextResponse.json({
+    // Validate query parameters
+    const { searchParams } = new URL(request.url);
+    const queryResult = getQuerySchema.safeParse({
+      userId: decodedToken.userId,
+      type: searchParams.get('type'),
+      orderType: searchParams.get('orderType'),
+      status: searchParams.get('status'),
+      assetId: searchParams.get('assetId'),
+      limit: parseInt(searchParams.get('limit') || '20'),
+      page: parseInt(searchParams.get('page') || '1'),
+    });
+
+    if (!queryResult.success) {
+      logger.warn('Invalid query parameters', { errors: queryResult.error });
+      return NextResponse.json(
+        { success: false, message: 'Invalid query parameters' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    const { userId, type, orderType, status, assetId, limit, page } = queryResult.data;
+
+    // Connect to database
+    const db = await connectToDatabase();
+    const ordersCollection = db.collection<Order>('orders');
+
+    // Build query
+    const query: any = { userId: sanitizeInput(userId) };
+    if (type) query.type = type;
+    if (orderType) query.orderType = orderType;
+    if (status) query.status = status;
+    if (assetId) query['asset.id'] = sanitizeInput(assetId);
+
+    // Get total count for pagination
+    const totalOrders = await ordersCollection.countDocuments(query);
+
+    // Fetch orders from MongoDB
+    const orders = await ordersCollection
+      .find(query)
+      .sort({ createdAt: -1 }) // Newest first
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .project({
+        id: 1,
+        type: 1,
+        orderType: 1,
+        asset: 1,
+        quantity: 1,
+        price: 1,
+        total: 1,
+        limitPrice: 1,
+        status: 1,
+        filledQuantity: 1,
+        createdAt: 1,
+        expiresAt: 1,
+        userId: 1,
+        transactionHash: 1,
+      })
+      .toArray();
+
+    const response: OrdersResponse = {
       success: true,
       data: {
-        orders: paginatedOrders,
+        orders,
         pagination: {
           page,
           limit,
           totalOrders,
-          totalPages
-        }
-      }
+          totalPages: Math.ceil(totalOrders / limit),
+        },
+      },
+    };
+
+    // Log successful request
+    logger.info('Orders fetched', {
+      userId,
+      type,
+      orderType,
+      status,
+      assetId,
+      page,
+      limit,
+      orderCount: orders.length,
+      duration: Date.now() - startTime,
     });
+
+    return NextResponse.json(response, { headers: securityHeaders });
+
   } catch (error) {
-    console.error('Orders error:', error);
+    // Handle specific error types
+    if (error instanceof RateLimiterMemory) {
+      logger.warn('Rate limit exceeded', { clientIp });
+      return NextResponse.json(
+        { success: false, message: 'Too many requests' },
+        { status: 429, headers: securityHeaders }
+      );
+    }
+
+    logger.error('Orders error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration: Date.now() - startTime,
+    });
+
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch orders' },
-      { status: 500 }
+      { success: false, message: 'Internal server error' },
+      { status: 500, headers: securityHeaders }
     );
   }
 }
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
+
   try {
-    // Check authentication
-    const authToken = cookies().get('auth_token');
-    
+    // Rate limiting
+    const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
+    await rateLimiter.consume(clientIp);
+
+    // Authentication check
+    const authToken = cookies().get('auth_token')?.value;
     if (!authToken) {
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: 'Authentication required' },
+        { status: 401, headers: securityHeaders }
       );
     }
 
-    // Get request body
+    // Verify JWT token
+    const decodedToken = await verifyToken(authToken);
+    if (!decodedToken) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid authentication token' },
+        { status: 401, headers: securityHeaders }
+      );
+    }
+
+    // Get and validate request body
     const body = await request.json();
-    const { type, orderType, assetId, assetName, assetSymbol, assetCategory, quantity, price, limitPrice, expiryDays } = body;
-    
-    // Validate required fields
-    if (!type || !orderType || !assetId || !assetName || !quantity || !price) {
+    const bodyResult = postBodySchema.safeParse(body);
+
+    if (!bodyResult.success) {
+      logger.warn('Invalid request body', { errors: bodyResult.error });
       return NextResponse.json(
-        { success: false, message: 'Missing required fields' },
-        { status: 400 }
+        { success: false, message: 'Invalid request body' },
+        { status: 400, headers: securityHeaders }
       );
     }
-    
-    // Validate order type
-    if (type !== 'buy' && type !== 'sell') {
+
+    const { type, orderType, assetId, assetName, assetSymbol, assetCategory, assetImage, quantity, price, limitPrice, expiryDays } = bodyResult.data;
+    const userId = decodedToken.userId;
+
+    // Connect to database
+    const db = await connectToDatabase();
+    const ordersCollection = db.collection<Order>('orders');
+    const assetsCollection = db.collection('ip_assets');
+
+    // Verify asset exists
+    const asset = await assetsCollection.findOne({ id: sanitizeInput(assetId), userId: sanitizeInput(userId) });
+    if (!asset) {
       return NextResponse.json(
-        { success: false, message: 'Invalid order type' },
-        { status: 400 }
+        { success: false, message: 'Asset not found' },
+        { status: 404, headers: securityHeaders }
       );
     }
-    
-    // Validate order type
-    if (orderType !== 'market' && orderType !== 'limit') {
-      return NextResponse.json(
-        { success: false, message: 'Invalid order type' },
-        { status: 400 }
-      );
-    }
-    
-    // Validate limit price for limit orders
-    if (orderType === 'limit' && !limitPrice) {
-      return NextResponse.json(
-        { success: false, message: 'Limit price is required for limit orders' },
-        { status: 400 }
-      );
-    }
-    
+
     // Calculate total
     const total = quantity * price;
-    
+
     // Calculate expiry date for limit orders
     let expiresAt: string | undefined;
     if (orderType === 'limit' && expiryDays) {
       const expiry = new Date();
-      expiry.setDate(expiry.getDate() + parseInt(expiryDays));
+      expiry.setDate(expiry.getDate() + expiryDays);
       expiresAt = expiry.toISOString();
     }
-    
+
     // Create new order
     const newOrder: Order = {
-      id: `order-${Date.now()}`,
+      id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
       orderType,
       asset: {
-        id: assetId,
-        name: assetName,
-        symbol: assetSymbol,
-        category: assetCategory || 'Other',
-        image: body.assetImage
+        id: sanitizeInput(assetId),
+        name: sanitizeInput(assetName),
+        symbol: sanitizeInput(assetSymbol),
+        category: assetCategory ? sanitizeInput(assetCategory) : 'Other',
+        image: assetImage ? sanitizeInput(assetImage) : undefined,
       },
       quantity,
       price,
@@ -178,114 +333,57 @@ export async function POST(request: Request) {
       filledQuantity: orderType === 'market' ? quantity : 0,
       createdAt: new Date().toISOString(),
       expiresAt,
-      userId: '1', // Mock user ID
-      transactionHash: orderType === 'market' ? `0x${Math.random().toString(16).substring(2, 42)}` : undefined
+      userId: sanitizeInput(userId),
+      transactionHash: orderType === 'market' ? `0x${Math.random().toString(16).substring(2, 42)}` : undefined,
     };
-    
-    // In a real implementation, you would save this to a database
-    // For now, we'll just return the new order
-    
-    return NextResponse.json({
+
+    // Save order to database
+    await ordersCollection.insertOne(newOrder);
+
+    const response: CreateOrderResponse = {
       success: true,
       data: newOrder,
-      message: `${type.charAt(0).toUpperCase() + type.slice(1)} order placed successfully`
+      message: `${type.charAt(0).toUpperCase() + type.slice(1)} order placed successfully`,
+    };
+
+    // Log successful request
+    logger.info('Order created', {
+      userId,
+      orderId: newOrder.id,
+      type,
+      orderType,
+      assetId,
+      duration: Date.now() - startTime,
     });
+
+    return NextResponse.json(response, { headers: securityHeaders });
+
   } catch (error) {
-    console.error('Create order error:', error);
+    // Handle specific error types
+    if (error instanceof RateLimiterMemory) {
+      logger.warn('Rate limit exceeded', { clientIp });
+      return NextResponse.json(
+        { success: false, message: 'Too many requests' },
+        { status: 429, headers: securityHeaders }
+      );
+    }
+
+    logger.error('Create order error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration: Date.now() - startTime,
+    });
+
     return NextResponse.json(
-      { success: false, message: 'Failed to place order' },
-      { status: 500 }
+      { success: false, message: 'Internal server error' },
+      { status: 500, headers: securityHeaders }
     );
   }
 }
 
-// Helper function to generate mock orders
-function generateMockOrders(): Order[] {
-  const now = new Date();
-  const orders: Order[] = [];
-  
-  // Sample assets
-  const assets = [
-    { id: 'asset-001', name: 'Urban Dreamscape', symbol: 'DREAM', category: 'Film', image: '/assets/film1.jpg' },
-    { id: 'asset-002', name: 'Harmonic Waves', symbol: 'WAVE', category: 'Music', image: '/assets/music1.jpg' },
-    { id: 'asset-003', name: 'Digital Renaissance', symbol: 'RENAI', category: 'Art', image: '/assets/art1.jpg' },
-    { id: 'asset-004', name: 'Neon Horizons', symbol: 'NEON', category: 'Gaming', image: '/assets/gaming1.jpg' },
-    { id: 'asset-005', name: 'Ethereal Chronicles', symbol: 'ETHER', category: 'Literature', image: '/assets/literature1.jpg' }
-  ];
-  
-  // Sample order types and statuses
-  const types = ['buy', 'sell'] as const;
-  const orderTypes = ['market', 'limit'] as const;
-  const statuses = ['open', 'filled', 'partial', 'cancelled', 'expired'] as const;
-  
-  // Generate 30 random orders
-  for (let i = 0; i < 30; i++) {
-    // Random asset
-    const asset = assets[Math.floor(Math.random() * assets.length)];
-    
-    // Random type and order type
-    const type = types[Math.floor(Math.random() * types.length)];
-    const orderType = orderTypes[Math.floor(Math.random() * orderTypes.length)];
-    
-    // Random status based on order type
-    let status: Order['status'];
-    if (orderType === 'market') {
-      status = 'filled'; // Market orders are always filled
-    } else {
-      status = statuses[Math.floor(Math.random() * statuses.length)];
-    }
-    
-    // Random quantity and price
-    const quantity = Math.floor(Math.random() * 10) + 1;
-    const price = parseFloat((1000 + Math.random() * 9000).toFixed(2));
-    const total = quantity * price;
-    
-    // Random dates
-    const daysAgo = Math.floor(Math.random() * 30);
-    const createdAt = new Date(now);
-    createdAt.setDate(now.getDate() - daysAgo);
-    
-    // Expiry date for limit orders
-    let expiresAt: string | undefined;
-    if (orderType === 'limit') {
-      const expiry = new Date(createdAt);
-      expiry.setDate(createdAt.getDate() + 7); // 7-day expiry
-      expiresAt = expiry.toISOString();
-    }
-    
-    // Filled quantity based on status
-    let filledQuantity: number | undefined;
-    if (status === 'filled') {
-      filledQuantity = quantity;
-    } else if (status === 'partial') {
-      filledQuantity = Math.floor(quantity * (Math.random() * 0.8 + 0.1)); // 10-90% filled
-    } else if (status === 'open' || status === 'cancelled' || status === 'expired') {
-      filledQuantity = 0;
-    }
-    
-    // Transaction hash for filled or partial orders
-    let transactionHash: string | undefined;
-    if (status === 'filled' || status === 'partial') {
-      transactionHash = `0x${Math.random().toString(16).substring(2, 42)}`;
-    }
-    
-    orders.push({
-      id: `order-${i + 1}`,
-      type,
-      orderType,
-      asset,
-      quantity,
-      price,
-      total,
-      limitPrice: orderType === 'limit' ? parseFloat((price * (type === 'buy' ? 0.95 : 1.05)).toFixed(2)) : undefined,
-      status,
-      filledQuantity,
-      createdAt: createdAt.toISOString(),
-      expiresAt,
-      userId: '1', // Mock user ID
-      transactionHash
-    });
-  }
-  
-  return orders;
+// Handle method not allowed
+export async function OPTIONS() {
+  return NextResponse.json(
+    { success: false, message: 'Method not allowed' },
+    { status: 405, headers: securityHeaders }
+  );
 }

@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { MongoClient, Db } from 'mongodb';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { z } from 'zod';
+import logger from '@/lib/logger';
+import { verifyToken } from '@/lib/auth';
+import { sanitizeInput } from '@/lib/sanitizer';
 
 // Marketplace listing interface
 interface MarketplaceListing {
@@ -34,180 +40,6 @@ interface MarketplaceListing {
   };
 }
 
-// Mock marketplace listings data
-const marketplaceListings: MarketplaceListing[] = [
-  {
-    id: 'listing-001',
-    assetId: 'asset-001',
-    name: 'Urban Dreamscape',
-    symbol: 'DREAM',
-    category: 'Film',
-    type: 'fractional',
-    price: 5000,
-    quantity: 10,
-    totalValue: 50000,
-    seller: {
-      id: 'user-001',
-      name: 'Alex Rivera',
-      reputation: 4.8
-    },
-    royaltyRate: 12.5,
-    description: 'Fractional ownership in the groundbreaking sci-fi film Urban Dreamscape.',
-    image: '/assets/film1.jpg',
-    performance: {
-      day: 2.3,
-      week: 5.8,
-      month: 15.2
-    },
-    tradingVolume: 45000,
-    createdAt: '2025-01-15T00:00:00Z',
-    expiresAt: '2025-07-15T00:00:00Z',
-    status: 'active',
-    metadata: {
-      director: 'Alex Rivera',
-      runtime: '120 minutes',
-      releaseDate: '2025-06-01',
-      genres: ['Science Fiction', 'Drama', 'Thriller']
-    }
-  },
-  {
-    id: 'listing-002',
-    assetId: 'asset-002',
-    name: 'Harmonic Waves',
-    symbol: 'WAVE',
-    category: 'Music',
-    type: 'fractional',
-    price: 2500,
-    quantity: 5,
-    totalValue: 12500,
-    seller: {
-      id: 'user-002',
-      name: 'Melody Chen',
-      reputation: 4.9
-    },
-    royaltyRate: 8.75,
-    description: 'Fractional ownership in the innovative music album Harmonic Waves.',
-    image: '/assets/music1.jpg',
-    performance: {
-      day: 1.2,
-      week: 3.5,
-      month: 9.7
-    },
-    tradingVolume: 28500,
-    createdAt: '2025-02-10T00:00:00Z',
-    expiresAt: '2025-08-10T00:00:00Z',
-    status: 'active',
-    metadata: {
-      artist: 'Melody Chen',
-      tracks: 12,
-      duration: '58 minutes',
-      genres: ['Electronic', 'Classical', 'Ambient']
-    }
-  },
-  {
-    id: 'listing-003',
-    assetId: 'asset-003',
-    name: 'Digital Renaissance',
-    symbol: 'RENAI',
-    category: 'Art',
-    type: 'full',
-    price: 7500,
-    quantity: 1,
-    totalValue: 7500,
-    seller: {
-      id: 'user-003',
-      name: 'Jordan Taylor',
-      reputation: 4.7
-    },
-    royaltyRate: 15.2,
-    description: 'Full ownership of a unique digital artwork from the Digital Renaissance collection.',
-    image: '/assets/art1.jpg',
-    performance: {
-      day: 3.1,
-      week: 7.5,
-      month: 18.4
-    },
-    tradingVolume: 37500,
-    createdAt: '2025-02-20T00:00:00Z',
-    expiresAt: '2025-05-20T00:00:00Z',
-    status: 'active',
-    metadata: {
-      artist: 'Jordan Taylor',
-      medium: 'Digital',
-      dimensions: '3000x3000px',
-      styles: ['Neo-Renaissance', 'Computational', 'Generative']
-    }
-  },
-  {
-    id: 'listing-004',
-    assetId: 'asset-004',
-    name: 'Neon Horizons',
-    symbol: 'NEON',
-    category: 'Gaming',
-    type: 'fractional',
-    price: 3000,
-    quantity: 20,
-    totalValue: 60000,
-    seller: {
-      id: 'user-004',
-      name: 'Digital Frontiers Studio',
-      reputation: 4.6
-    },
-    royaltyRate: 10.5,
-    description: 'Fractional ownership in the cyberpunk open-world game Neon Horizons.',
-    image: '/assets/gaming1.jpg',
-    performance: {
-      day: 1.8,
-      week: 4.2,
-      month: 12.3
-    },
-    tradingVolume: 33000,
-    createdAt: '2025-03-10T00:00:00Z',
-    expiresAt: '2025-09-10T00:00:00Z',
-    status: 'active',
-    metadata: {
-      developer: 'Digital Frontiers Studio',
-      platform: 'Multi-platform',
-      genre: 'Open-world RPG',
-      releaseDate: '2025-09-15'
-    }
-  },
-  {
-    id: 'listing-005',
-    assetId: 'asset-005',
-    name: 'Ethereal Chronicles',
-    symbol: 'ETHER',
-    category: 'Literature',
-    type: 'fractional',
-    price: 1500,
-    quantity: 15,
-    totalValue: 22500,
-    seller: {
-      id: 'user-005',
-      name: 'Aria Montgomery',
-      reputation: 4.5
-    },
-    royaltyRate: 7.5,
-    description: 'Fractional ownership in the fantasy novel series Ethereal Chronicles.',
-    image: '/assets/literature1.jpg',
-    performance: {
-      day: 0.9,
-      week: 2.8,
-      month: 6.5
-    },
-    tradingVolume: 18000,
-    createdAt: '2025-03-25T00:00:00Z',
-    expiresAt: '2025-09-25T00:00:00Z',
-    status: 'active',
-    metadata: {
-      author: 'Aria Montgomery',
-      format: 'Novel Series',
-      volumes: 5,
-      genres: ['Fantasy', 'Science Fiction', 'Adventure']
-    }
-  }
-];
-
 // Transaction interface
 interface Transaction {
   id: string;
@@ -222,93 +54,309 @@ interface Transaction {
   transactionHash?: string;
 }
 
-// Mock transactions data
-const transactions: Transaction[] = [
-  {
-    id: 'tx-001',
-    listingId: 'listing-001',
-    buyerId: 'user-005',
-    sellerId: 'user-001',
-    price: 5000,
-    quantity: 2,
-    totalAmount: 10000,
-    status: 'completed',
-    timestamp: '2025-02-15T10:30:00Z',
-    transactionHash: '0x1234567890abcdef1234567890abcdef12345678'
-  },
-  {
-    id: 'tx-002',
-    listingId: 'listing-002',
-    buyerId: 'user-004',
-    sellerId: 'user-002',
-    price: 2500,
-    quantity: 1,
-    totalAmount: 2500,
-    status: 'completed',
-    timestamp: '2025-03-05T14:45:00Z',
-    transactionHash: '0xabcdef1234567890abcdef1234567890abcdef12'
+// Similar listing interface
+interface SimilarListing {
+  id: string;
+  name: string;
+  symbol: string;
+  type: 'full' | 'fractional';
+  price: number;
+  image?: string;
+}
+
+// Price history interface
+interface PriceHistory {
+  date: string;
+  price: number;
+}
+
+// Response interfaces
+interface ListingDetailsResponse {
+  success: boolean;
+  data?: {
+    listing: MarketplaceListing;
+    transactions: Transaction[];
+    similarListings: SimilarListing[];
+    priceHistory: PriceHistory[];
+  };
+  message?: string;
+}
+
+interface UpdateListingResponse {
+  success: boolean;
+  data?: {
+    listing: MarketplaceListing;
+    message: string;
+  };
+  message?: string;
+}
+
+interface DeleteListingResponse {
+  success: boolean;
+  data?: {
+    message: string;
+  };
+  message?: string;
+}
+
+interface PurchaseListingResponse {
+  success: boolean;
+  data?: {
+    transaction: Transaction;
+    message: string;
+    nextSteps: string[];
+  };
+  message?: string;
+}
+
+// MongoDB connection
+let cachedDb: Db | null = null;
+
+async function connectToDatabase(): Promise<Db> {
+  if (cachedDb) {
+    return cachedDb;
   }
-];
+
+  const client = await MongoClient.connect(process.env.MONGODB_URI!, {
+    maxPoolSize: 10,
+    minPoolSize: 2,
+  });
+
+  cachedDb = client.db(process.env.MONGODB_DB);
+  return cachedDb;
+}
+
+// Rate limiter configuration
+const rateLimiter = new RateLimiterMemory({
+  points: 10, // 10 requests
+  duration: 60, // per minute
+});
+
+// Validation schemas
+const paramsSchema = z.object({
+  userId: z.string().uuid(),
+  id: z.string().regex(/^listing-[0-9a-fA-F-]+$/),
+});
+
+const updateBodySchema = z.object({
+  price: z.number().positive().optional(),
+  quantity: z.number().int().positive().optional(),
+  description: z.string().min(10).max(1000).optional(),
+  expiresAt: z
+    .string()
+    .refine((val) => new Date(val) > new Date(), { message: 'Expiration date must be in the future' })
+    .optional(),
+  status: z.enum(['active', 'pending', 'sold', 'expired']).optional(),
+}).refine((data) => Object.keys(data).length > 0, { message: 'At least one field must be provided for update' });
+
+const purchaseBodySchema = z.object({
+  action: z.literal('purchase'),
+  quantity: z.number().int().positive(),
+});
+
+// Security headers
+const securityHeaders = {
+  'Content-Security-Policy': "default-src 'self'",
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+};
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const startTime = Date.now();
+
   try {
-    // Check authentication
-    const authToken = cookies().get('auth_token');
-    
+    // Rate limiting
+    const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
+    await rateLimiter.consume(clientIp);
+
+    // Authentication check
+    const authToken = cookies().get('auth_token')?.value;
     if (!authToken) {
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: 'Authentication required' },
+        { status: 401, headers: securityHeaders }
       );
     }
 
-    const id = params.id;
-    
-    // Find the listing by ID
-    const listing = marketplaceListings.find(l => l.id === id);
-    
+    // Verify JWT token
+    const decodedToken = await verifyToken(authToken);
+    if (!decodedToken) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid authentication token' },
+        { status: 401, headers: securityHeaders }
+      );
+    }
+
+    // Validate parameters
+    const paramsResult = paramsSchema.safeParse({
+      userId: decodedToken.userId,
+      id: params.id,
+    });
+
+    if (!paramsResult.success) {
+      logger.warn('Invalid parameters', { errors: paramsResult.error });
+      return NextResponse.json(
+        { success: false, message: 'Invalid parameters' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    const { userId, id } = paramsResult.data;
+
+    // Connect to database
+    const db = await connectToDatabase();
+    const listingsCollection = db.collection<MarketplaceListing>('marketplace_listings');
+    const transactionsCollection = db.collection<Transaction>('transactions');
+    const priceHistoryCollection = db.collection('price_history');
+
+    // Fetch the listing
+    const listing = await listingsCollection.findOne({
+      id: sanitizeInput(id),
+      userId: sanitizeInput(userId),
+    });
+
     if (!listing) {
       return NextResponse.json(
         { success: false, message: 'Listing not found' },
-        { status: 404 }
+        { status: 404, headers: securityHeaders }
       );
     }
 
-    // Get transaction history for this listing
-    const listingTransactions = transactions.filter(t => t.listingId === id);
-    
-    // Get similar listings (same category)
-    const similarListings = marketplaceListings
-      .filter(l => l.category === listing.category && l.id !== listing.id && l.status === 'active')
-      .map(l => ({
-        id: l.id,
-        name: l.name,
-        symbol: l.symbol,
-        type: l.type,
-        price: l.price,
-        image: l.image
-      }));
-    
-    // Get price history (mock data)
-    const priceHistory = generatePriceHistory(listing);
+    // Fetch transaction history
+    const rawTransactions = await transactionsCollection
+      .find({ listingId: sanitizeInput(id) })
+      .project({
+        id: 1,
+        listingId: 1,
+        buyerId: 1,
+        sellerId: 1,
+        price: 1,
+        quantity: 1,
+        totalAmount: 1,
+        status: 1,
+        timestamp: 1,
+        transactionHash: 1,
+      })
+      .toArray();
+      
+    // Convert MongoDB documents to Transaction type
+    const listingTransactions: Transaction[] = rawTransactions.map(item => ({
+      id: item.id as string,
+      listingId: item.listingId as string,
+      buyerId: item.buyerId as string,
+      sellerId: item.sellerId as string,
+      price: item.price as number,
+      quantity: item.quantity as number,
+      totalAmount: item.totalAmount as number,
+      status: item.status as string,
+      timestamp: item.timestamp as string,
+      transactionHash: item.transactionHash as string | undefined
+    }));
 
-    return NextResponse.json({
+    // Fetch similar listings
+    const rawSimilarListings = await listingsCollection
+      .find({
+        userId: sanitizeInput(userId),
+        category: listing.category,
+        id: { $ne: listing.id },
+        status: 'active',
+      })
+      .limit(4)
+      .project({
+        id: 1,
+        name: 1,
+        symbol: 1,
+        type: 1,
+        price: 1,
+        image: 1,
+      })
+      .toArray();
+      
+    // Convert MongoDB documents to SimilarListing type
+    const similarListings: SimilarListing[] = rawSimilarListings.map(item => ({
+      id: item.id as string,
+      name: item.name as string,
+      symbol: item.symbol as string,
+      type: item.type as 'full' | 'fractional',
+      price: item.price as number,
+      image: item.image as string | undefined
+    }));
+
+    // Fetch price history
+    let rawPriceHistory = await priceHistoryCollection
+      .find({
+        listingId: sanitizeInput(id),
+        date: { $gte: listing.createdAt },
+      })
+      .sort({ date: 1 })
+      .project({
+        date: 1,
+        price: 1,
+        _id: 0,
+      })
+      .toArray();
+      
+    // Convert MongoDB documents to PriceHistory type
+    let priceHistory: PriceHistory[] = rawPriceHistory.map(item => ({
+      date: item.date as string,
+      price: item.price as number
+    }));
+
+    // Generate mock price history if none exists
+    if (!priceHistory.length) {
+      priceHistory = await generatePriceHistory(listing);
+      await priceHistoryCollection.insertMany(
+        priceHistory.map((data) => ({
+          ...data,
+          listingId: sanitizeInput(id),
+          userId: sanitizeInput(userId),
+          createdAt: new Date(),
+        }))
+      );
+    }
+
+    const response: ListingDetailsResponse = {
       success: true,
       data: {
         listing,
         transactions: listingTransactions,
         similarListings,
-        priceHistory
-      }
+        priceHistory,
+      },
+    };
+
+    // Log successful request
+    logger.info('Listing details fetched', {
+      userId,
+      listingId: id,
+      duration: Date.now() - startTime,
     });
+
+    return NextResponse.json(response, { headers: securityHeaders });
+
   } catch (error) {
-    console.error('Get listing error:', error);
+    // Handle specific error types
+    if (error instanceof RateLimiterMemory) {
+      const clientIpAddress = request.headers.get('x-forwarded-for') || 'unknown';
+      logger.warn('Rate limit exceeded', { clientIp: clientIpAddress });
+      return NextResponse.json(
+        { success: false, message: 'Too many requests' },
+        { status: 429, headers: securityHeaders }
+      );
+    }
+
+    logger.error('Get listing error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration: Date.now() - startTime,
+    });
+
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch listing details' },
-      { status: 500 }
+      { success: false, message: 'Internal server error' },
+      { status: 500, headers: securityHeaders }
     );
   }
 }
@@ -317,81 +365,139 @@ export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const startTime = Date.now();
+
   try {
-    // Check authentication
-    const authToken = cookies().get('auth_token');
-    
+    // Rate limiting
+    const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
+    await rateLimiter.consume(clientIp);
+
+    // Authentication check
+    const authToken = cookies().get('auth_token')?.value;
     if (!authToken) {
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: 'Authentication required' },
+        { status: 401, headers: securityHeaders }
       );
     }
 
-    const id = params.id;
-    
-    // Find the listing by ID
-    const listingIndex = marketplaceListings.findIndex(l => l.id === id);
-    
-    if (listingIndex === -1) {
+    // Verify JWT token
+    const decodedToken = await verifyToken(authToken);
+    if (!decodedToken) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid authentication token' },
+        { status: 401, headers: securityHeaders }
+      );
+    }
+
+    // Validate parameters
+    const paramsResult = paramsSchema.safeParse({
+      userId: decodedToken.userId,
+      id: params.id,
+    });
+
+    if (!paramsResult.success) {
+      logger.warn('Invalid parameters', { errors: paramsResult.error });
+      return NextResponse.json(
+        { success: false, message: 'Invalid parameters' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    const { userId, id } = paramsResult.data;
+
+    // Get and validate request body
+    const body = await request.json();
+    const bodyResult = updateBodySchema.safeParse(body);
+
+    if (!bodyResult.success) {
+      logger.warn('Invalid request body', { errors: bodyResult.error });
+      return NextResponse.json(
+        { success: false, message: 'Invalid request body' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    const updateData = bodyResult.data;
+
+    // Connect to database
+    const db = await connectToDatabase();
+    const listingsCollection = db.collection<MarketplaceListing>('marketplace_listings');
+
+    // Fetch the listing
+    const listing = await listingsCollection.findOne({
+      id: sanitizeInput(id),
+      userId: sanitizeInput(userId),
+    });
+
+    if (!listing) {
       return NextResponse.json(
         { success: false, message: 'Listing not found' },
-        { status: 404 }
+        { status: 404, headers: securityHeaders }
       );
     }
-    
-    // Get the existing listing
-    const listing = marketplaceListings[listingIndex];
-    
-    // Check if the user is the seller (mock check)
-    // In a real implementation, you would compare the authenticated user's ID with the seller's ID
-    const isUserSeller = true;
-    
-    if (!isUserSeller) {
+
+    // Check if the user is the seller
+    if (listing.seller.id !== userId) {
       return NextResponse.json(
         { success: false, message: 'You are not authorized to update this listing' },
-        { status: 403 }
+        { status: 403, headers: securityHeaders }
       );
     }
-    
-    // Get request body
-    const body = await request.json();
-    const { price, quantity, description, expiresAt, status } = body;
-    
-    // Validate required fields
-    if (!price && !quantity && !description && !expiresAt && !status) {
-      return NextResponse.json(
-        { success: false, message: 'No fields to update' },
-        { status: 400 }
-      );
-    }
-    
-    // Update the listing
+
+    // Prepare update
     const updatedListing = {
       ...listing,
-      price: price || listing.price,
-      quantity: quantity || listing.quantity,
-      totalValue: (price || listing.price) * (quantity || listing.quantity),
-      description: description || listing.description,
-      expiresAt: expiresAt || listing.expiresAt,
-      status: status || listing.status
+      price: updateData.price || listing.price,
+      quantity: updateData.quantity || listing.quantity,
+      totalValue: (updateData.price || listing.price) * (updateData.quantity || listing.quantity),
+      description: updateData.description ? sanitizeInput(updateData.description) : listing.description,
+      expiresAt: updateData.expiresAt || listing.expiresAt,
+      status: updateData.status || listing.status,
     };
-    
-    // In a real implementation, this would update the database
-    // For this mock, we'll just return the updated listing
-    
-    return NextResponse.json({
+
+    // Update listing in database
+    await listingsCollection.updateOne(
+      { id: sanitizeInput(id), userId: sanitizeInput(userId) },
+      { $set: updatedListing }
+    );
+
+    const response: UpdateListingResponse = {
       success: true,
       data: {
         listing: updatedListing,
-        message: 'Listing updated successfully'
-      }
+        message: 'Listing updated successfully',
+      },
+    };
+
+    // Log successful request
+    logger.info('Listing updated', {
+      userId,
+      listingId: id,
+      duration: Date.now() - startTime,
     });
+
+    return NextResponse.json(response, { headers: securityHeaders });
+
   } catch (error) {
-    console.error('Update listing error:', error);
+    // Handle specific error types
+    if (error instanceof RateLimiterMemory) {
+      const clientIpAddress = request.headers.get('x-forwarded-for') || 'unknown';
+      logger.warn('Rate limit exceeded', { clientIp: clientIpAddress });
+      return NextResponse.json(
+        { success: false, message: 'Too many requests' },
+        { status: 429, headers: securityHeaders }
+      );
+    }
+
+    logger.error('Update listing error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration: Date.now() - startTime,
+    });
+
     return NextResponse.json(
-      { success: false, message: 'Failed to update listing' },
-      { status: 500 }
+      { success: false, message: 'Internal server error' },
+      { status: 500, headers: securityHeaders }
     );
   }
 }
@@ -400,54 +506,113 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const startTime = Date.now();
+
   try {
-    // Check authentication
-    const authToken = cookies().get('auth_token');
-    
+    // Rate limiting
+    const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
+    await rateLimiter.consume(clientIp);
+
+    // Authentication check
+    const authToken = cookies().get('auth_token')?.value;
     if (!authToken) {
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: 'Authentication required' },
+        { status: 401, headers: securityHeaders }
       );
     }
 
-    const id = params.id;
-    
-    // Find the listing by ID
-    const listingIndex = marketplaceListings.findIndex(l => l.id === id);
-    
-    if (listingIndex === -1) {
+    // Verify JWT token
+    const decodedToken = await verifyToken(authToken);
+    if (!decodedToken) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid authentication token' },
+        { status: 401, headers: securityHeaders }
+      );
+    }
+
+    // Validate parameters
+    const paramsResult = paramsSchema.safeParse({
+      userId: decodedToken.userId,
+      id: params.id,
+    });
+
+    if (!paramsResult.success) {
+      logger.warn('Invalid parameters', { errors: paramsResult.error });
+      return NextResponse.json(
+        { success: false, message: 'Invalid parameters' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    const { userId, id } = paramsResult.data;
+
+    // Connect to database
+    const db = await connectToDatabase();
+    const listingsCollection = db.collection<MarketplaceListing>('marketplace_listings');
+
+    // Fetch the listing
+    const listing = await listingsCollection.findOne({
+      id: sanitizeInput(id),
+      userId: sanitizeInput(userId),
+    });
+
+    if (!listing) {
       return NextResponse.json(
         { success: false, message: 'Listing not found' },
-        { status: 404 }
+        { status: 404, headers: securityHeaders }
       );
     }
-    
-    // Check if the user is the seller (mock check)
-    // In a real implementation, you would compare the authenticated user's ID with the seller's ID
-    const isUserSeller = true;
-    
-    if (!isUserSeller) {
+
+    // Check if the user is the seller
+    if (listing.seller.id !== userId) {
       return NextResponse.json(
         { success: false, message: 'You are not authorized to delete this listing' },
-        { status: 403 }
+        { status: 403, headers: securityHeaders }
       );
     }
-    
-    // In a real implementation, this would delete from the database
-    // For this mock, we'll just return success
-    
-    return NextResponse.json({
+
+    // Delete listing from database
+    await listingsCollection.deleteOne({
+      id: sanitizeInput(id),
+      userId: sanitizeInput(userId),
+    });
+
+    const response: DeleteListingResponse = {
       success: true,
       data: {
-        message: 'Listing deleted successfully'
-      }
+        message: 'Listing deleted successfully',
+      },
+    };
+
+    // Log successful request
+    logger.info('Listing deleted', {
+      userId,
+      listingId: id,
+      duration: Date.now() - startTime,
     });
+
+    return NextResponse.json(response, { headers: securityHeaders });
+
   } catch (error) {
-    console.error('Delete listing error:', error);
+    // Handle specific error types
+    if (error instanceof RateLimiterMemory) {
+      const clientIpAddress = request.headers.get('x-forwarded-for') || 'unknown';
+      logger.warn('Rate limit exceeded', { clientIp: clientIpAddress });
+      return NextResponse.json(
+        { success: false, message: 'Too many requests' },
+        { status: 429, headers: securityHeaders }
+      );
+    }
+
+    logger.error('Delete listing error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration: Date.now() - startTime,
+    });
+
     return NextResponse.json(
-      { success: false, message: 'Failed to delete listing' },
-      { status: 500 }
+      { success: false, message: 'Internal server error' },
+      { status: 500, headers: securityHeaders }
     );
   }
 }
@@ -456,76 +621,130 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const startTime = Date.now();
+
   try {
-    // Check authentication
-    const authToken = cookies().get('auth_token');
-    
+    // Rate limiting
+    const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
+    await rateLimiter.consume(clientIp);
+
+    // Authentication check
+    const authToken = cookies().get('auth_token')?.value;
     if (!authToken) {
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: 'Authentication required' },
+        { status: 401, headers: securityHeaders }
       );
     }
 
-    const id = params.id;
-    
-    // Find the listing by ID
-    const listing = marketplaceListings.find(l => l.id === id);
-    
+    // Verify JWT token
+    const decodedToken = await verifyToken(authToken);
+    if (!decodedToken) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid authentication token' },
+        { status: 401, headers: securityHeaders }
+      );
+    }
+
+    // Validate parameters
+    const paramsResult = paramsSchema.safeParse({
+      userId: decodedToken.userId,
+      id: params.id,
+    });
+
+    if (!paramsResult.success) {
+      logger.warn('Invalid parameters', { errors: paramsResult.error });
+      return NextResponse.json(
+        { success: false, message: 'Invalid parameters' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    const { userId, id } = paramsResult.data;
+
+    // Get and validate request body
+    const body = await request.json();
+    const bodyResult = purchaseBodySchema.safeParse(body);
+
+    if (!bodyResult.success) {
+      logger.warn('Invalid request body', { errors: bodyResult.error });
+      return NextResponse.json(
+        { success: false, message: 'Invalid request body' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    const { action, quantity } = bodyResult.data;
+
+    // Connect to database
+    const db = await connectToDatabase();
+    const listingsCollection = db.collection<MarketplaceListing>('marketplace_listings');
+    const transactionsCollection = db.collection<Transaction>('transactions');
+
+    // Fetch the listing
+    const listing = await listingsCollection.findOne({
+      id: sanitizeInput(id),
+      userId: sanitizeInput(userId),
+    });
+
     if (!listing) {
       return NextResponse.json(
         { success: false, message: 'Listing not found' },
-        { status: 404 }
+        { status: 404, headers: securityHeaders }
       );
     }
-    
+
     // Check if the listing is active
     if (listing.status !== 'active') {
       return NextResponse.json(
         { success: false, message: 'This listing is not available for purchase' },
-        { status: 400 }
+        { status: 400, headers: securityHeaders }
       );
     }
-    
-    // Get request body
-    const body = await request.json();
-    const { action, quantity } = body;
-    
-    // Validate action
-    if (action !== 'purchase') {
-      return NextResponse.json(
-        { success: false, message: 'Invalid action' },
-        { status: 400 }
-      );
-    }
-    
+
     // Validate quantity
-    if (!quantity || quantity <= 0 || quantity > listing.quantity) {
+    if (quantity > listing.quantity) {
       return NextResponse.json(
-        { success: false, message: 'Invalid quantity' },
-        { status: 400 }
+        { success: false, message: 'Requested quantity exceeds available quantity' },
+        { status: 400, headers: securityHeaders }
       );
     }
-    
+
     // Calculate total amount
     const totalAmount = listing.price * quantity;
-    
-    // Create a new transaction (mock implementation)
+
+    // Create new transaction
     const transaction: Transaction = {
-      id: `tx-${Date.now()}`,
+      id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       listingId: listing.id,
-      buyerId: 'user-current', // In a real implementation, this would be the current user's ID
+      buyerId: userId,
       sellerId: listing.seller.id,
       price: listing.price,
       quantity,
       totalAmount,
       status: 'pending',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
-    // In a real implementation, this would save to a database and process the transaction
-    
-    return NextResponse.json({
+
+    // Save transaction to database
+    await transactionsCollection.insertOne(transaction);
+
+    // Update listing quantity
+    const updatedQuantity = listing.quantity - quantity;
+    const updatedStatus = updatedQuantity === 0 ? 'sold' : listing.status;
+
+    await listingsCollection.updateOne(
+      { id: sanitizeInput(id), userId: sanitizeInput(userId) },
+      {
+        $set: {
+          quantity: updatedQuantity,
+          totalValue: listing.price * updatedQuantity,
+          status: updatedStatus,
+        },
+      }
+    );
+
+    const response: PurchaseListingResponse = {
       success: true,
       data: {
         transaction,
@@ -533,48 +752,81 @@ export async function POST(
         nextSteps: [
           'Your purchase is being processed.',
           'You will receive a confirmation once the transaction is complete.',
-          'You can view the status of your purchase in your orders.'
-        ]
-      }
+          'You can view the status of your purchase in your orders.',
+        ],
+      },
+    };
+
+    // Log successful request
+    logger.info('Purchase initiated', {
+      userId,
+      listingId: id,
+      transactionId: transaction.id,
+      duration: Date.now() - startTime,
     });
+
+    return NextResponse.json(response, { headers: securityHeaders });
+
   } catch (error) {
-    console.error('Purchase error:', error);
+    // Handle specific error types
+    if (error instanceof RateLimiterMemory) {
+      const clientIpAddress = request.headers.get('x-forwarded-for') || 'unknown';
+      logger.warn('Rate limit exceeded', { clientIp: clientIpAddress });
+      return NextResponse.json(
+        { success: false, message: 'Too many requests' },
+        { status: 429, headers: securityHeaders }
+      );
+    }
+
+    logger.error('Purchase error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      duration: Date.now() - startTime,
+    });
+
     return NextResponse.json(
-      { success: false, message: 'Failed to process purchase' },
-      { status: 500 }
+      { success: false, message: 'Internal server error' },
+      { status: 500, headers: securityHeaders }
     );
   }
 }
 
 // Helper function to generate price history
-function generatePriceHistory(listing: MarketplaceListing) {
+async function generatePriceHistory(listing: MarketplaceListing): Promise<PriceHistory[]> {
   const now = new Date();
   const startDate = new Date(listing.createdAt);
   const dayDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  
-  const priceData = [];
+
+  const priceData: PriceHistory[] = [];
   let currentPrice = listing.price * 0.9; // Start at 90% of current price
-  
+
   for (let i = 0; i <= dayDiff; i++) {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
-    
+
     // Add some randomness but maintain an upward trend
     const randomFactor = 0.98 + Math.random() * 0.04; // Random between 0.98 and 1.02
     const trendFactor = 1 + (i / Math.max(1, dayDiff)) * 0.1; // Gradually increase
-    
+
     currentPrice = currentPrice * randomFactor * trendFactor;
-    
+
     // Ensure we reach the current price at the end
     if (i === dayDiff) {
       currentPrice = listing.price;
     }
-    
+
     priceData.push({
       date: date.toISOString().split('T')[0],
-      price: parseFloat(currentPrice.toFixed(2))
+      price: Number(currentPrice.toFixed(2)),
     });
   }
-  
+
   return priceData;
+}
+
+// Handle method not allowed
+export async function OPTIONS() {
+  return NextResponse.json(
+    { success: false, message: 'Method not allowed' },
+    { status: 405, headers: securityHeaders }
+  );
 }

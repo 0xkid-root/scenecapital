@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useAccount, useBalance, useChainId } from "wagmi";
+import { createOrder } from "@/lib/api-services/orders";
 import { Loader2, Info, AlertCircle, DollarSign, Percent, ArrowRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
@@ -134,43 +135,84 @@ export function OrderManagement() {
 
     setLoading(true);
     try {
-      // Here we'll implement the blockchain order placement logic
-      const provider = new ethers.providers.Web3Provider((window as any).ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
+      // Get the current asset
+      const asset = assets.find(a => a.id === selectedAsset);
+      if (!asset) {
+        throw new Error("Selected asset not found");
+      }
+
+      // Prepare blockchain transaction if wallet is connected
+      let transactionHash;
+      if (isConnected && address) {
+        // Initialize blockchain transaction
+        const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+        
+        // Example contract interaction (replace with actual contract address)
+        const orderManagerAddress = "YOUR_CONTRACT_ADDRESS";
+        const amountInWei = ethers.utils.parseEther(amount);
+        
+        // Simulate blockchain transaction
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Mock transaction hash
+        transactionHash = `0x${Math.random().toString(16).substring(2)}${Math.random().toString(16).substring(2)}`;
+      }
       
-      // Example contract interaction (replace with actual contract address)
-      const orderManagerAddress = "YOUR_CONTRACT_ADDRESS";
-      const amountInWei = ethers.utils.parseEther(amount);
+      // Create order via API
+      const orderData = {
+        type: selectedTab as "buy" | "sell",
+        orderType: orderType,
+        assetId: asset.id,
+        assetName: asset.name,
+        assetSymbol: asset.id.substring(6), // Mock symbol
+        assetCategory: asset.category,
+        assetImage: asset.image,
+        quantity: parseInt(quantity),
+        price: parseFloat(asset.price),
+        total: parseFloat(amount),
+        limitPrice: orderType === "limit" ? parseFloat(limitPrice) : undefined,
+        expiryDays: orderType === "limit" ? parseInt(expiryDays) : undefined,
+      };
       
-      // Simulate blockchain delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call the API service to create the order
+      const response = await createOrder(orderData);
       
-      // Place order logic here
-      toast({
-        title: "Order placed successfully",
-        description: `Your ${selectedTab} order for ${quantity} units of ${currentAsset?.name} has been placed.`,
-      });
-      
-      // Reset form
-      if (selectedTab === "buy") {
-        setSelectedAsset("");
-        setQuantity("1");
-        setLimitPrice("");
+      if (response.success) {
+        toast({
+          title: "Order placed successfully",
+          description: `Your ${selectedTab} order for ${quantity} units of ${asset.name} has been placed.`,
+        });
+        
+        // Reset form
+        if (selectedTab === "buy") {
+          setSelectedAsset("");
+          setQuantity("1");
+          setLimitPrice("");
+        }
+      } else {
+        throw new Error(response.message || "Failed to create order");
       }
     } catch (error) {
       if (error instanceof Error) {
         console.error(error.message);
+        toast({
+          title: "Error placing order",
+          description: error.message || "An error occurred while processing your order",
+          variant: "destructive",
+        });
       } else {
         console.error("Unknown error", error);
+        toast({
+          title: "Error placing order",
+          description: "An unknown error occurred while processing your order",
+          variant: "destructive",
+        });
       }
-      toast({
-        title: "Error placing order",
-        description: "An unknown error occurred while processing your order",
-        variant: "destructive",
-      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

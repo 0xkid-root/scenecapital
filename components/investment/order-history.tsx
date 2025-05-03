@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,8 +24,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { CalendarIcon, ChevronDown, Download, Eye, Filter, MoreHorizontal, RefreshCw, Search, Share2, Sliders } from "lucide-react";
+import { getOrders, cancelOrder, Order as ApiOrder } from "@/lib/api-services/orders";
 
-// Define order interface
+// Define order interface for the component
 interface Order {
   id: string;
   date: string;
@@ -41,101 +42,145 @@ interface Order {
   txHash?: string;
 }
 
-export function OrderHistory() {
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: "ORD-2024-001",
-      date: "2024-04-28",
-      assetId: "asset-001",
-      assetName: "Urban Dreamscape",
-      assetCategory: "Film",
-      creator: "Alex Rivera",
-      quantity: 2,
-      price: "5000",
-      amount: "10000",
-      status: "completed",
-      type: "buy",
-      txHash: "0x7d3e7d9f6b6c5a4b3c2d1e0f9e8d7c6b5a4b3c2d1",
-    },
-    {
-      id: "ORD-2024-002",
-      date: "2024-04-25",
-      assetId: "asset-002",
-      assetName: "Harmonic Waves",
-      assetCategory: "Music",
-      creator: "Melody Chen",
-      quantity: 1,
-      price: "2500",
-      amount: "2500",
-      status: "pending",
-      type: "buy",
-    },
-    {
-      id: "ORD-2024-003",
-      date: "2024-04-20",
-      assetId: "asset-003",
-      assetName: "Digital Renaissance",
-      assetCategory: "Art",
-      creator: "Jordan Taylor",
-      quantity: 1,
-      price: "7500",
-      amount: "7500",
-      status: "failed",
-      type: "buy",
-    },
-    {
-      id: "ORD-2024-004",
-      date: "2024-04-15",
-      assetId: "asset-001",
-      assetName: "Urban Dreamscape",
-      assetCategory: "Film",
-      creator: "Alex Rivera",
-      quantity: 1,
-      price: "5250",
-      amount: "5250",
-      status: "completed",
-      type: "sell",
-      txHash: "0x8f9e8d7c6b5a4b3c2d1e0f9e8d7c6b5a4b3c2d1",
-    },
-  ]);
+// Map API order status to UI status
+const mapApiStatusToUiStatus = (apiStatus: string): "completed" | "pending" | "failed" | "canceled" => {
+  switch (apiStatus) {
+    case "filled":
+      return "completed";
+    case "open":
+    case "partial":
+      return "pending";
+    case "expired":
+      return "failed";
+    case "cancelled":
+      return "canceled";
+    default:
+      return "pending";
+  }
+};
 
+// Convert API order to UI order
+const convertApiOrderToUiOrder = (apiOrder: ApiOrder): Order => {
+  return {
+    id: apiOrder.id,
+    date: new Date(apiOrder.createdAt).toISOString().split('T')[0],
+    assetId: apiOrder.asset.id,
+    assetName: apiOrder.asset.name,
+    assetCategory: apiOrder.asset.category,
+    creator: "Unknown", // API doesn't provide creator info
+    quantity: apiOrder.quantity,
+    price: apiOrder.price.toString(),
+    amount: apiOrder.total.toString(),
+    status: mapApiStatusToUiStatus(apiOrder.status),
+    type: apiOrder.type,
+    txHash: apiOrder.transactionHash
+  };
+}
+
+export function OrderHistory() {
+  const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
 
-  // Filter orders based on search term and filters
+  // Fetch orders from API
+  const fetchOrders = async () => {
+    setIsLoading(true);
+    try {
+      // Map UI status filter to API status
+      let apiStatus: string | undefined;
+      if (statusFilter !== "all") {
+        switch (statusFilter) {
+          case "completed":
+            apiStatus = "filled";
+            break;
+          case "pending":
+            apiStatus = "open";
+            break;
+          case "failed":
+            apiStatus = "expired";
+            break;
+          case "canceled":
+            apiStatus = "cancelled";
+            break;
+        }
+      }
+
+      // Prepare API params
+      const params: any = {
+        page,
+        limit: 10
+      };
+
+      if (typeFilter !== "all") {
+        params.type = typeFilter;
+      }
+
+      if (apiStatus) {
+        params.status = apiStatus;
+      }
+
+      // Call API
+      const response = await getOrders(params);
+      
+      if (response.success && response.data) {
+        // Convert API orders to UI orders
+        const uiOrders = response.data.orders.map(convertApiOrderToUiOrder);
+        setOrders(uiOrders);
+        
+        // Set pagination info
+        if (response.data.pagination) {
+          setTotalPages(response.data.pagination.totalPages);
+        }
+      } else {
+        toast({
+          title: "Error fetching orders",
+          description: response.message || "Failed to load orders",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load orders. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchOrders();
+  }, [page, statusFilter, typeFilter]);
+
+  // Filter orders based on search term and date filter
   const filteredOrders = orders.filter(order => {
     // Search filter
     const matchesSearch = searchTerm === "" || 
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.assetName.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Status filter
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-
-    // Type filter
-    const matchesType = typeFilter === "all" || order.type === typeFilter;
-
     // Date filter
     const matchesDate = !selectedDate || 
       format(new Date(order.date), "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
 
-    return matchesSearch && matchesStatus && matchesType && matchesDate;
+    return matchesSearch && matchesDate;
   });
 
   const refreshOrders = () => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Orders refreshed",
-        description: "Latest order data has been loaded",
-      });
-    }, 1000);
+    fetchOrders();
+    toast({
+      title: "Orders refreshed",
+      description: "Latest order data has been loaded",
+    });
   };
 
   const clearFilters = () => {
