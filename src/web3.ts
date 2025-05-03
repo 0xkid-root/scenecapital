@@ -520,7 +520,6 @@ export class SceneCapitalSDK {
     });
   }
 
-
   async getAllDeployedAssets(): Promise<string[]> {
     return this.ipAssetFactory.getAllDeployedAssets();
   }

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import useIPFSUpload from "@/hooks/useIPFSUpload";
+
 import {
   Select,
   SelectContent,
@@ -60,6 +62,8 @@ export function SubmitProjectModal({ isOpen, onClose }: SubmitProjectModalProps)
     teamSize: "",
     royaltyPercentage: "",
   });
+  const { uploadAssetsCreation, loading: ipfsLoading } = useIPFSUpload();
+
 
   const validateStep = (step: number): boolean => {
     const newErrors: FormErrors = {};
@@ -133,6 +137,20 @@ export function SubmitProjectModal({ isOpen, onClose }: SubmitProjectModalProps)
     
     setIsSubmitting(true);
     try {
+      // Map form data to the expected shape for uploadAssetsCreation
+      const assetsMetadata = {
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        price: form.fundingGoal, // or another field if you have a price
+        currency: "ETH" as const,
+        images: form.coverImage ? [form.coverImage] : [],
+        documents: form.documents || [],
+        validatorId: "demo-validator", // replace with actual validator if needed
+      };
+
+      const ipfsResults = await uploadAssetsCreation(assetsMetadata);
+      console.log('IPFS Upload Results:', ipfsResults);
       // TODO: Implement actual form submission logic here
       await new Promise(resolve => setTimeout(resolve, 2000)); // Simulated API call
       toast.success("Project submitted successfully!");
@@ -340,7 +358,7 @@ export function SubmitProjectModal({ isOpen, onClose }: SubmitProjectModalProps)
           <div className="relative z-10">
             {/* Header */}
             <div className="p-6 pb-4 border-b border-slate-200/10">
-              <h3 className="text-xl font-bold text-white">Submit New Project</h3>
+              <h3 className="text-xl font-bold text-white">Submit New Project </h3>
               <p className="text-sm text-slate-400 mt-1">
                 Step {currentStep} of 3: {" "}
                 {currentStep === 1
