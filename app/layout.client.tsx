@@ -17,25 +17,29 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
-const clashDisplay = localFont({
-  src: [
-    {
-      path: '../../public/fonts/ClashDisplay-Regular.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../../public/fonts/ClashDisplay-Medium.woff2',
-      weight: '500',
-      style: 'normal',
-    },
-    {
-      path: '../../public/fonts/ClashDisplay-Bold.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
+// Import fonts directly from the project root
+const clashDisplayRegular = localFont({ 
+  src: '../fonts/ClashDisplay-Regular.woff2',
+  weight: '400',
+  style: 'normal',
   variable: '--font-clash-display',
+  display: 'swap',
+});
+
+const clashDisplayMedium = localFont({ 
+  src: '../fonts/ClashDisplay-Medium.woff2',
+  weight: '500',
+  style: 'normal',
+  variable: '--font-clash-display-medium',
+  display: 'swap',
+});
+
+const clashDisplayBold = localFont({ 
+  src: '../fonts/ClashDisplay-Bold.woff2',
+  weight: '700',
+  style: 'normal',
+  variable: '--font-clash-display-bold',
+  display: 'swap',
 });
 
 export default function RootLayout({
@@ -48,7 +52,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
-      <body className={`${inter.variable} ${clashDisplay.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${clashDisplayRegular.variable} ${clashDisplayMedium.variable} ${clashDisplayBold.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
