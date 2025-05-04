@@ -1,224 +1,137 @@
-# Scene Capital - IP Licensing & Ownership Platform
 
-Scene Capital is a pioneering Web3 platform that revolutionizes IP licensing and ownership through blockchain technology. The platform connects creators, investors, and fans in a decentralized ecosystem for creative works.
 
-## Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [User Flows](#user-flows)
-  - [Investor Flow](#investor-flow)
-  - [Creator Flow](#creator-flow)
-- [Technical Architecture](#technical-architecture)
-- [Smart Contract Integration](#smart-contract-integration)
-- [Network Configuration](#network-configuration)
+# Scene Capital 🎬
 
-## Overview
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://scenecapital.vercel.app/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/0xkid-root/scenecapital)
+[![Network](https://img.shields.io/badge/Network-Pharos%20Testnet-purple)](https://pharos-testnet.caldera.xyz/)
 
-Scene Capital enables:
-- Fractional ownership of creative IP assets
-- Transparent licensing and royalty distribution
-- Direct connection between creators and investors
-- Automated revenue sharing through smart contracts
+> A Web3 platform revolutionizing IP licensing and ownership on the Pharos Network
 
-## Features
+## 🚀 Project Summary
 
-### Core Features
-- Web3 wallet integration (MetaMask)
-- Pharos Network support
-- Real-time portfolio tracking
-- Automated royalty distribution
-- IP tokenization system
-- Marketplace for trading IP tokens
+Scene Capital is designed for the Pharos Blockchain Hackathon, leveraging the Pharos Network to transform intellectual property (IP) management. Through fractional IP ownership and automated royalty distribution via smart contracts, we're building a decentralized ecosystem connecting creators, investors, and fans.
 
-### Dashboard Features
-- Portfolio value tracking
-- Investment performance metrics
-- Project management tools
-- Licensing deal management
-- Transaction history
-- Network switching capability
+## 🎯 Hackathon Objectives
 
-## User Flows
+- 🔄 Showcase Pharos Network's scalability and security for IP tokenization
+- 🎨 Deliver a user-friendly platform for tokenized IP asset management
+- 💰 Implement automated, decentralized royalty distribution
 
-### Investor Flow
+## ✨ Core Features
 
-1. **Initial Access**
-   - Click "Invest in IP" on landing page
-   - Connect MetaMask wallet through modal
-   - Automatically redirected to investor dashboard
+- 🎨 **Fractional IP Ownership** — Buy fractional shares of creative IP
+- 🔗 **Transparent Licensing** — Trustless agreements, verified on-chain
+- 💸 **Automated Royalties** — Fair payments through smart contracts
+- 🤝 **Direct Connections** — Eliminate intermediaries
+- 🔐 **Pharos Integration** — Secured on Pharos Testnet
 
-2. **Wallet Connection**
-   - MetaMask connection prompt
-   - Pharos Network addition (Chain ID: 0xC352)
-   - Wallet address display and copy feature
+## 👥 Target Users
 
-3. **Investor Dashboard**
-   - View portfolio value ($24,563.00)
-   - Track investment performance
-   - Monitor royalty income
-   - View tokenized IP holdings
+| User Type | Description |
+|-----------|-------------|
+| Creators | Artists, musicians, filmmakers, writers |
+| Investors | Individuals and institutions exploring IP assets |
+| Licensees | Businesses seeking content licensing |
+| Fans | Supporters backing favorite creators |
 
-4. **Investment Process**
-   - Browse available IP projects
-   - View detailed project information
-   - Perform due diligence
-   - Make investment through smart contracts
-   - Receive tokenized ownership shares
+## 🛠 Technical Architecture
 
-5. **Portfolio Management**
-   - Track individual investments
-   - Monitor ROI and performance
-   - View royalty distributions
-   - Trade IP tokens on marketplace
+### Frontend
+- ⚛️ Framework: Next.js 13 (App Router)
+- 📝 Language: TypeScript
+- 🎨 Styling: Tailwind CSS
+- ✨ Animation: Framer Motion
+- 🎯 UI Library: Shadcn/ui
+- 🔄 State: React Hooks, Context API
 
-### Creator Flow
+### Backend
+- 🔌 API: Next.js RESTful Routes
+- 🗄️ Database: MongoDB Atlas
+- 🔑 Auth: JWT + Cookie storage
+- ✅ Validation: Express-validator
 
-1. **Initial Access**
-   - Click "Submit Your Project" on landing page
-   - Connect MetaMask wallet
-   - Redirected to creator dashboard
-
-2. **Project Submission**
-   - Fill project details
-   - Upload creative assets
-   - Set licensing terms
-   - Define ownership structure
-   - Configure revenue distribution
-
-3. **Creator Dashboard**
-   - Project management tools
-   - Funding progress tracking
-   - Royalty income monitoring
-   - Licensing deal management
-
-4. **IP Tokenization Process**
-   - Project verification
-   - Smart contract deployment
-   - Token distribution setup
-   - Secondary market configuration
-
-5. **Revenue Management**
-   - Track licensing deals
-   - Monitor royalty payments
-   - Manage token distributions
-   - View transaction history
-
-## Technical Architecture
-
-### Frontend Stack
-- Next.js 13 (App Router)
-- TypeScript
-- Tailwind CSS
-- Framer Motion
-- Shadcn/ui Components
-
-### Web3 Integration
-- MetaMask Wallet Connection
-- Pharos Network Support
-- Smart Contract Interaction
-- Token Management
-
-### Key Components
-1. **WalletConnectModal**
-   ```typescript
-   - Handles wallet connection
-   - Network switching
-   - Error handling
-   - Redirect management
-   ```
-
-2. **NetworkSwitch**
-   ```typescript
-   - Manages network selection
-   - Displays connection status
-   - Handles network errors
-   ```
-
-3. **Dashboard Layout**
-   ```typescript
-   - Responsive design
-   - Tab-based navigation
-   - Portfolio value display
-   - Dynamic content loading
-   ```
-
-## Smart Contract Integration
-
-### Network Configuration
-```javascript
+### Blockchain Integration
+```json
 {
-  chainId: "0xC352",
-  chainName: "Pharos Testnet",
-  nativeCurrency: {
-    name: "ETH",
-    symbol: "ETH",
-    decimals: 18
+  "chainId": "0xC352",
+  "chainName": "Pharos Testnet",
+  "nativeCurrency": {
+    "name": "Pharos",
+    "symbol": "pharos",
+    "decimals": 18
   },
-  rpcUrls: ["https://pharos-testnet.rpc.caldera.xyz/http"],
-  blockExplorerUrls: ["https://pharos-testnet.caldera.xyz/"]
+  "rpcUrls": ["https://pharos-testnet.rpc.caldera.xyz/http"],
+  "blockExplorerUrls": ["https://pharos-testnet.caldera.xyz/"]
 }
 ```
 
-### Key Smart Contracts
-1. **IP Tokenization Contract**
-   - Handles token creation
-   - Manages ownership rights
-   - Controls token transfers
+### Deployment
+- 🌐 Frontend/API: Vercel
+- 📊 Smart Contracts: Pharos Testnet
+- 💾 Database: MongoDB Atlas
 
-2. **Royalty Distribution Contract**
-   - Automated payments
-   - Revenue sharing
-   - Token holder distributions
+## 📊 Platform Features
 
-3. **Marketplace Contract**
-   - Token trading
-   - Price discovery
-   - Transaction management
+### Investor Dashboard
+- 💰 Track portfolio value ($50,000+)
+- 📈 View performance metrics (+10% gain/month)
+- 📊 Asset distribution & ROI visualization
+- 🔍 Transaction history
 
-## Security Features
+### Creator Dashboard
+- 🎨 Project creation & tracking
+- 📊 Funding progress monitoring
+- 🔄 IP tokenization management
 
-1. **Wallet Security**
-   - Secure wallet connection
-   - Transaction signing
-   - Network validation
+### Order Management
+- 📈 Market/Limit orders
+- 🔄 Status tracking
+- ✅ Transaction verification
 
-2. **Data Protection**
-   - Encrypted storage
-   - Secure API calls
-   - Protected user information
+### Licensing System
+- 📝 Smart agreement creation
+- 💰 Royalty management
+- 🌍 Territory definition
+- 📊 Status monitoring
 
-3. **Smart Contract Safety**
-   - Audited contracts
-   - Fail-safe mechanisms
-   - Emergency stops
+## 🔒 Security Features
 
-## Getting Started
+- 👛 Wallet: Secure MetaMask integration
+- 🔐 Data: Encrypted storage
+- ✅ Smart Contracts: Audited with fail-safes
 
-1. Clone the repository
+## 🚀 Getting Started
+
 ```bash
-git clone https://github.com/your-username/scene-capital.git
-cd scene-capital
-```
+# Clone repository
+git clone https://github.com/0xkid-root/scenecapital.git
+cd scenecapital
 
-2. Install dependencies
-```bash
+# Install dependencies
 npm install
-```
 
-3. Set up environment variables
-```bash
+# Setup environment
 cp .env.example .env.local
-```
+# Configure Pharos RPC and MongoDB URI
 
-4. Run development server
-```bash
+# Development
 npm run dev
+
+# Production
+npm run build
+npm run start
 ```
 
-## Contributing
+## ⚡ Pharos Network Benefits
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+- 🚀 **Scalability**: High-volume IP transaction handling
+- 🔒 **Security**: Tamper-proof contract execution
+- ⚡ **Speed**: Fast confirmations for real-time operations
 
-## License
+## 🏆 Hackathon Deliverables
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details. 
+- ✅ [Live Demo](https://scenecapital.vercel.app)
+- ✅ [Source Code](https://github.com/0xkid-root/scenecapital)
+- ✅ Contracts on Pharos Testnet
+- ✅ Pitch Deck
